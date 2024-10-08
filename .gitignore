@@ -49,9 +49,8 @@ compiled/
 # Local configuration files
 config
 
-# Ignore Dockerfile and requirements if generated
-Dockerfile
-requirements.txt
+# Ignore Docker-generated PID files
+*.pid
 
 # Logs
 *.log

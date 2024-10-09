@@ -100,5 +100,3 @@ if selected_user != "Tous":
 else:
     st.subheader("Vue d'ensemble du département")
     # Ici, vous pouvez ajouter des graphiques ou des tableaux pour la vue d'ensemble du département
-
-st.sidebar.info("Développé par Eric Ferole")

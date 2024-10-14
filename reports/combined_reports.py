@@ -1,5 +1,6 @@
 import pandas as pd
-from typing import Tuple
+from typing import List
+from datetime import datetime, timedelta
 from .jira_reports import JiraReports
 from .tempo_reports import TempoReport
 
@@ -91,3 +92,27 @@ class JiraTempoReport:
         department_leaked_time = sum(self.get_leaked_time(start_date, end_date, user_name) for user_name in department_users)
 
         return department_leaked_time
+
+    def calculate_weekly_billable_hours(self, start_date: str, end_date: str) -> pd.DataFrame:
+        start = datetime.strptime(start_date, "%Y-%m-%d")
+        end = datetime.strptime(end_date, "%Y-%m-%d")
+
+        current_users = self.jira_report.get_current_users()
+        weekly_data = []
+
+        while start <= end:
+            week_end = start + timedelta(days=6)
+            week_end = min(week_end, end)
+
+            for user in current_users:
+                billable_time = self.get_billable_time(start.strftime("%Y-%m-%d"), week_end.strftime("%Y-%m-%d"), user)
+
+                weekly_data.append({
+                    'user': user,
+                    'week_start': start,
+                    'billable_hours': billable_time
+                })
+
+            start = week_end + timedelta(days=1)
+
+        return pd.DataFrame(weekly_data)

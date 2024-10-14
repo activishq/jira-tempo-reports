@@ -1,6 +1,9 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, call
+from datetime import datetime, timedelta
 from reports.jira_reports import JiraReports
+from reports.combined_reports import JiraTempoReport
+import random
 import pandas as pd
 
 class TestJiraReports(unittest.TestCase):
@@ -98,6 +101,48 @@ class TestJiraReports(unittest.TestCase):
         estimated_time = jira_reports.get_department_estimated_time('2023-01-01', '2023-01-31')
 
         self.assertEqual(estimated_time, 10.0)  # 4.0 + 2.0 + 3.0 + 1.0
+
+    @patch('reports.tempo_reports.TempoReport')
+    def test_calculate_weekly_billable_hours(self, mock_tempo_report):
+        jira_tempo_report = JiraTempoReport()
+
+        # Utiliser la vraie méthode get_current_users
+        real_users = JiraReports().get_current_users()
+
+        # Mock de la méthode get_billable_time
+        jira_tempo_report.get_billable_time = MagicMock(return_value=40.0)
+
+        # Définir la période de test
+        start_date = '2023-01-01'
+        end_date = '2023-01-14'  # 2 semaines
+
+        # Appeler la méthode à tester
+        result = jira_tempo_report.calculate_weekly_billable_hours(start_date, end_date)
+
+        # Vérifications
+        self.assertIsInstance(result, pd.DataFrame)
+
+        # Vérifier que tous les utilisateurs réels sont dans le résultat
+        self.assertEqual(set(real_users), set(result['user'].unique()),
+                         "Les utilisateurs dans le résultat devraient correspondre exactement aux utilisateurs réels")
+
+        # Vérifier que le nombre de lignes est correct (nombre d'utilisateurs * 2 semaines)
+        expected_rows = len(real_users) * 2
+        self.assertEqual(len(result), expected_rows,
+                         f"Expected {expected_rows} rows, but got {len(result)}")
+
+        # Vérifier les dates de début de semaine
+        expected_week_starts = [datetime(2023, 1, 1), datetime(2023, 1, 8)]
+        self.assertEqual(set(result['week_start'].unique()), set(expected_week_starts))
+
+        # Vérifier que get_billable_time a été appelé correctement pour chaque utilisateur et chaque semaine
+        expected_calls = [
+            call(start_date, '2023-01-07', user) for user in real_users
+        ] + [
+            call('2023-01-08', end_date, user) for user in real_users
+        ]
+        jira_tempo_report.get_billable_time.assert_has_calls(expected_calls, any_order=True)
+
 
 if __name__ == '__main__':
     unittest.main()

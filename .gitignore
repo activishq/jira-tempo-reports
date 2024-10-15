@@ -69,8 +69,8 @@ data/
 # Ignore reports
 reports.ipynb
 
-# Ignore scripts output
-scripts/
+# # Ignore scripts output
+# scripts/
 
 # Ignore test outputs
 tests/__pycache__/

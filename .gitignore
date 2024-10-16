@@ -66,11 +66,8 @@ data/
 *.tmp
 *.temp
 
-# Ignore reports
-reports.ipynb
-
-# # Ignore scripts output
-# scripts/
+# Ignore Jupiter notebook
+*.ipynb
 
 # Ignore test outputs
 tests/__pycache__/

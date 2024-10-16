@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from scripts.db_operations import get_db_connection
+from datetime import datetime, timedelta
 
 def load_data():
     with get_db_connection() as conn:
@@ -19,19 +20,36 @@ def main():
 
     df = load_data()
 
+    # Conversion de la colonne 'week_start_date' en datetime
+    df['week_start_date'] = pd.to_datetime(df['week_start_date'])
+
+    # Date range picker
+    min_date = df['week_start_date'].min().date()
+    max_date = df['week_start_date'].max().date()
+    default_start_date = max_date - timedelta(days=30)
+    default_end_date = max_date
+
+    start_date, end_date = st.date_input(
+        "Sélectionnez une plage de dates",
+        value=(default_start_date, default_end_date),
+        min_value=min_date,
+        max_value=max_date
+    )
+
     # Sélecteur d'employé
     employees = df['full_name'].unique()
     selected_employee = st.selectbox("Sélectionnez un employé", employees)
 
-    # Filtrer les données pour l'employé sélectionné
-    employee_data = df[df['full_name'] == selected_employee]
+    # Filtrer les données pour l'employé sélectionné et la plage de dates
+    mask = (df['full_name'] == selected_employee) & (df['week_start_date'].dt.date >= start_date) & (df['week_start_date'].dt.date <= end_date)
+    employee_data = df.loc[mask]
 
     # Calcul des métriques
     total_hours = employee_data['total_hours'].sum()
     billable_hours = employee_data['billable_hours'].sum()
     non_billable_hours = employee_data['non_billable_hours'].sum()
     billable_ratio = (billable_hours / total_hours * 100) if total_hours > 0 else 0
-    mean_billable_hours = billable_hours / len(employee_data['week_start_date'].unique())
+    mean_billable_hours = billable_hours / len(employee_data['week_start_date'].unique()) if len(employee_data) > 0 else 0
 
     # Affichage des métriques de l'utilisateur
     col1, col2, col3, col4 = st.columns(4)
@@ -41,9 +59,12 @@ def main():
     col4.metric(label="Ratio facturable", value=f"{billable_ratio:.0f}%")
 
     # Graphique des heures facturables au fil du temps
-    fig = px.line(employee_data, x='week_start_date', y=['billable_hours', 'non_billable_hours'],
-                  title=f"Heures facturables et non facturables pour {selected_employee}")
-    st.plotly_chart(fig)
+    if not employee_data.empty:
+        fig = px.line(employee_data, x='week_start_date', y=['billable_hours', 'non_billable_hours'],
+                      title=f"Heures facturables et non facturables pour {selected_employee}")
+        st.plotly_chart(fig)
+    else:
+        st.warning("Aucune donnée disponible pour la période sélectionnée.")
 
     # Tableau des données
     st.write("Données détaillées:")

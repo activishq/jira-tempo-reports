@@ -9,19 +9,26 @@ def get_date_range(start_date: Optional[datetime] = None, end_date: Optional[dat
         end_date = datetime.now().date()
 
     if start_date is None:
+        # Par défaut, on prend la semaine précédente
         start_date = end_date - timedelta(days=7)
 
-    while start_date.weekday() != 0:
+    # S'assurer que start_date est un lundi
+    while start_date.weekday() != 0:  # 0 représente lundi
         start_date -= timedelta(days=1)
 
-    while end_date.weekday() != 6:
+    # S'assurer que end_date est un dimanche
+    while end_date.weekday() != 6:  # 6 représente dimanche
         end_date += timedelta(days=1)
 
     return start_date, end_date
 
 def process_data(start_date: datetime, end_date: datetime):
     jira_tempo_report = JiraTempoReport()
-    weekly_billable_hours = jira_tempo_report.calculate_weekly_billable_hours(start_date.isoformat(), end_date.isoformat())
+    # Utilisez strftime pour formater la date en YYYY-MM-DD
+    weekly_billable_hours = jira_tempo_report.calculate_weekly_billable_hours(
+        start_date.strftime("%Y-%m-%d"),
+        end_date.strftime("%Y-%m-%d")
+    )
 
     # Assurez-vous que toutes les colonnes nécessaires sont présentes
     if 'non_billable_hours' not in weekly_billable_hours.columns:

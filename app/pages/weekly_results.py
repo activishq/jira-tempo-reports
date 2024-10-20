@@ -49,14 +49,14 @@ def weekly_results_page():
     df_jira = jira_tempo_report.get_merged_report(start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), selected_employee)
 
     # Sélection et renommage des colonnes pertinentes
-    df_display = df_jira[['Issue Key', 'Estimated Time', 'Total Time Spent', "Period's Logged Time", 'Total Leaked Time']]
+    df_display = df_jira[['Issue Key', 'Estimated Time', 'Total Time Spent', "Period's Logged Time", 'Total Leaked Time', "Period's Leaked Time"]]
 
     # Tri du DataFrame
     df_display = df_display.sort_values(by="Period's Logged Time", ascending=False)
 
     # Affichage du DataFrame
     st.subheader("Détails des Issues Jira")
-    st.dataframe(df_display)
+    st.dataframe(df_display, use_container_width=True)
 
 if __name__ == "__main__":
     weekly_results_page()

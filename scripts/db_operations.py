@@ -3,6 +3,25 @@ import psycopg2
 from dotenv import load_dotenv
 import pandas as pd
 import datetime
+from typing import List
+
+load_dotenv()
+
+def get_db_connection():
+    return psycopg2.connect(
+        dbname=os.getenv('DB_NAME'),
+        user=os.getenv('DB_USER'),
+        password=os.getenv('DB_PASSWORD'),
+        host=os.getenv('DB_HOST'),
+        port=os.getenv('DB_PORT')
+    )
+
+import os
+import psycopg2
+from dotenv import load_dotenv
+import pandas as pd
+import datetime
+from typing import List
 
 load_dotenv()
 
@@ -43,6 +62,8 @@ def insert_data_to_db(data: pd.DataFrame):
             conn.commit()
     print("Données insérées avec succès dans la base de données.")
 
+# Les autres fonctions restent inchangées
+
 def verify_data_in_db(start_date: datetime, end_date: datetime):
     with get_db_connection() as conn:
         with conn.cursor() as cur:
@@ -74,3 +95,58 @@ def verify_data_in_db(start_date: datetime, end_date: datetime):
             print("\nExemples d'enregistrements pour la période:")
             for record in cur.fetchall():
                 print(record)
+
+# Les autres fonctions restent inchangées
+
+def insert_availability(employee_id: str, week_start: datetime, budget_hours: float):
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO availability (employee_id, week_start_date, budget_hours)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (employee_id, week_start_date)
+                DO UPDATE SET
+                    budget_hours = EXCLUDED.budget_hours
+            """, (employee_id, week_start, budget_hours))
+        conn.commit()
+
+def get_availability(employee_id: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+    with get_db_connection() as conn:
+        query = """
+        SELECT week_start_date, budget_hours
+        FROM availability
+        WHERE employee_id = %s AND week_start_date BETWEEN %s AND %s
+        ORDER BY week_start_date
+        """
+        return pd.read_sql(query, conn, params=(employee_id, start_date, end_date))
+
+def get_employees() -> List[str]:
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT DISTINCT employee_id FROM employees ORDER BY employee_id")
+            return [row[0] for row in cur.fetchall()]
+
+def insert_target(employee_id: str, week_start: datetime, target_hours: float):
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO target (employee_id, week_start_date, target_hours)
+                VALUES (%s, %s, %s)
+                ON CONFLICT ON CONSTRAINT unique_employee_week_target
+                DO UPDATE SET
+                    target_hours = EXCLUDED.target_hours
+            """, (employee_id, week_start, target_hours))
+        conn.commit()
+    print(f"Target inserted/updated for employee {employee_id}, week starting {week_start}: {target_hours} hours")
+
+def get_target(employee_id: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+    with get_db_connection() as conn:
+        query = """
+        SELECT week_start_date, target_hours
+        FROM target
+        WHERE employee_id = %s AND week_start_date BETWEEN %s AND %s
+        ORDER BY week_start_date
+        """
+        df = pd.read_sql(query, conn, params=(employee_id, start_date, end_date))
+        df['week_start_date'] = pd.to_datetime(df['week_start_date']).dt.date
+        return df

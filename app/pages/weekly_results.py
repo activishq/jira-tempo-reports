@@ -54,9 +54,48 @@ def weekly_results_page():
     # Tri du DataFrame
     df_display = df_display.sort_values(by="Period's Logged Time", ascending=False)
 
-    # Affichage du DataFrame
+    numeric_columns = ['Estimated Time', 'Total Time Spent', "Period's Logged Time", 'Total Leaked Time', "Period's Leaked Time"]
+    for col in numeric_columns:
+        df_display[col] = df_display[col].round(1)
+
+    base_url = "https://activis.atlassian.net/browse/"  # Remplacez ceci par l'URL de base de votre instance Jira
+    df_display['URL'] = base_url + df_display['Issue Key']
+
+
     st.subheader("Détails des Issues Jira")
-    st.dataframe(df_display, use_container_width=True)
+    st.dataframe(
+        df_display,
+        column_config={
+            "Issue Key": "Issue",
+            "Estimated Time": st.column_config.NumberColumn(
+                "Temps estimé",
+                help="Temps estimé pour l'issue",
+                format="%.1f h"
+            ),
+            "Total Time Spent": st.column_config.NumberColumn(
+                "Temps total passé",
+                help="Temps total passé sur l'issue",
+                format="%.1f h"
+            ),
+            "Period's Logged Time": st.column_config.NumberColumn(
+                "Temps enregistré (période)",
+                help="Temps enregistré pour la période sélectionnée",
+                format="%.1f h"
+            ),
+            "Total Leaked Time": st.column_config.NumberColumn(
+                "Temps de fuite total",
+                help="Temps de fuite total pour l'issue",
+                format="%.1f h"
+            ),
+            "Period's Leaked Time": st.column_config.NumberColumn(
+                "Temps de fuite (période)",
+                help="Temps de fuite pour la période sélectionnée",
+                format="%.1f h"
+            ),
+            "URL": st.column_config.LinkColumn("Lien Jira")
+        },
+        hide_index=True, use_container_width=True
+    )
 
 if __name__ == "__main__":
     weekly_results_page()

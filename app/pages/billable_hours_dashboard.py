@@ -100,16 +100,16 @@ def main():
         x=df['week_start_date'],
         y=df['billable_hours'],
         name='Heures facturables',
-        marker_color='blue'  # Tu peux changer la couleur si nécessaire
+        marker_color='#064742'
     ))
 
-    # Ajouter la trace pour la courbe (target_hours)
     fig.add_trace(go.Scatter(
         x=df['week_start_date'],
         y=df['target_hours'],
         name='Cible d\'heures',
-        mode='lines+markers',  # Cela trace une courbe avec des points
-        line=dict(color='red', width=2)  # Couleur et épaisseur de la ligne
+        mode='lines+markers',
+        line=dict(color='#39F780', width=3),
+        marker=dict(color='#39F780', size=10)
     ))
 
     # Mettre à jour la mise en page du graphique
@@ -126,18 +126,7 @@ def main():
 
     # Tableau détaillé
     st.subheader("Données détaillées")
-    st.dataframe(df[['week_start_date', 'total_hours', 'billable_hours', 'non_billable_hours', 'budget_hours', 'target_hours']])
-
-    # Analyse supplémentaire
-    st.subheader("Analyse supplémentaire")
-    avg_weekly_hours = df['total_hours'].mean()
-    max_weekly_hours = df['total_hours'].max()
-    min_weekly_hours = df['total_hours'].min()
-
-    st.write(f"Moyenne hebdomadaire : {avg_weekly_hours:.2f}h")
-    st.write(f"Maximum hebdomadaire : {max_weekly_hours:.2f}h")
-    st.write(f"Minimum hebdomadaire : {min_weekly_hours:.2f}h")
-    st.write(f"Utilisation du budget : {budget_utilization:.1f}%")
+    st.dataframe(df[['week_start_date', 'total_hours', 'billable_hours', 'non_billable_hours', 'budget_hours', 'target_hours']], use_container_width=True)
 
 if __name__ == "__main__":
     main()

@@ -9,7 +9,6 @@ import os
 
 load_dotenv()
 
-
 JIRA_URL = "https://activis.atlassian.net"
 
 class JiraReports:

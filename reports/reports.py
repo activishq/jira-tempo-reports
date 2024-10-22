@@ -9,7 +9,7 @@ import unittest
 class JiraReports:
     def __init__(self):
         self.jira_url = "https://activis.atlassian.net"
-        self.auth = HTTPBasicAuth(config('USERNAME'), config('API_KEY'))
+        self.auth = HTTPBasicAuth(config('JIRA_USERNAME'), config('JIRA_API_KEY'))
 
     def get_current_users(self):
         users = ['Sonia Marquette', 'Claire Conrardy', 'Benoit Leboucher', 'Eric Ferole', 'Laurence Cauchon', 'Julien Le Mée', 'David Chabot', 'Thierry Tanguay']
@@ -93,7 +93,7 @@ class JiraReports:
 class TempoReport:
     def __init__(self):
         self.base_url = f"https://api.tempo.io/core/3/worklogs"
-        self.access_token = config('ACCESS_TOKEN')
+        self.access_token = config('TEMPO_ACCESS_TOKEN')
         self.session = requests.Session()
         self.session.headers.update({
             "Authorization": f"Bearer {self.access_token}"

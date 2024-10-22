@@ -7,23 +7,13 @@ from typing import List
 
 load_dotenv()
 
-def get_db_connection():
-    return psycopg2.connect(
-        dbname=os.getenv('DB_NAME'),
-        user=os.getenv('DB_USER'),
-        password=os.getenv('DB_PASSWORD'),
-        host=os.getenv('DB_HOST'),
-        port=os.getenv('DB_PORT')
-    )
+ENV = os.getenv("ENV", "local")
 
-import os
-import psycopg2
-from dotenv import load_dotenv
-import pandas as pd
-import datetime
-from typing import List
-
-load_dotenv()
+DB_HOST = "db" if ENV == "docker" else os.getenv("DB_HOST", "localhost")
+DB_NAME = os.getenv("DB_NAME", "jira_reports_data")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_PORT = os.getenv("DB_PORT", "5432")
 
 def get_db_connection():
     return psycopg2.connect(

@@ -1,19 +1,29 @@
 import sys
 import os
-
-# Ajouter le dossier 'reports' au chemin de recherche des modules
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'reports')))
-
-
+from dotenv import load_dotenv
 import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from reports import JiraTempoReport
 from sqlalchemy import text
 
+# Ajouter le dossier 'reports' au chemin de recherche des modules
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'reports')))
+
+load_dotenv()
+
+ENV = os.getenv("ENV", "local")
+
+DB_HOST = "db" if ENV == "docker" else os.getenv("DB_HOST", "localhost")
+DB_NAME = os.getenv("DB_NAME", "jira_reports_data")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_PORT = os.getenv("DB_PORT", "5432")
+
+
 def main():
     # Connexion à la base de données PostgreSQL
-    engine = create_engine('postgresql://report_user:pixelpixel@localhost:5432/company_reports')
+    engine = create_engine(f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}')
     Session = sessionmaker(bind=engine)
     session = Session()
 

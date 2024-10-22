@@ -1,12 +1,24 @@
-version: '3.8'
-
 services:
   app:
-    build:
-      context: .
+    build: .
     ports:
       - "8501:8501"
     env_file:
-      - .env
+      - .env.docker
     volumes:
       - .:/app
+    depends_on:
+      - db
+
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=jira_reports_data
+      - POSTGRES_USER=ericferole
+      - POSTGRES_PASSWORD=pixelpixel
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/migrations
+
+volumes:
+  postgres_data:

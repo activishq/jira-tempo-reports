@@ -87,6 +87,9 @@ jira-tempo-report/
 └── README.md
 ```
 
+psql "sslmode=require host=tempo-jira-cluster-do-user-14565660-0.i.db.ondigitalocean.com port=25060 dbname=defaultdb user=doadmin password=AVNS_7R_s77uZf--fmO7JckS sslrootcert=./certs/ca-certificate.crt"
+
+
 ## Contribution
 Les contributions à ce projet sont les bienvenues. Veuillez suivre ces étapes pour contribuer :
 1. Forkez le projet

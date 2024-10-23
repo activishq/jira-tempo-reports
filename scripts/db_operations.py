@@ -7,21 +7,21 @@ from typing import List
 
 load_dotenv()
 
-ENV = os.getenv("ENV", "local")
-
-DB_HOST = "db" if ENV == "docker" else os.getenv("DB_HOST", "localhost")
-DB_NAME = os.getenv("DB_NAME", "jira_reports_data")
+DB_HOST = os.getenv("DB_HOST")
+DB_NAME = os.getenv("DB_NAME")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_PORT = os.getenv("DB_PORT", "5432")
+DB_PORT = os.getenv("DB_PORT")
+
 
 def get_db_connection():
     return psycopg2.connect(
-        dbname=os.getenv('DB_NAME'),
-        user=os.getenv('DB_USER'),
-        password=os.getenv('DB_PASSWORD'),
-        host=os.getenv('DB_HOST'),
-        port=os.getenv('DB_PORT')
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        host=DB_HOST,
+        port=DB_PORT,
+        sslmode='require'
     )
 
 def insert_data_to_db(data: pd.DataFrame):

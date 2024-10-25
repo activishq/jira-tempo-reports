@@ -22,6 +22,8 @@ coverage.xml
 .hypothesis/
 
 # Environments
+config/.env.*
+!config/.env.example
 .env
 .venv
 env/

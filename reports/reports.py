@@ -4,8 +4,6 @@ from decouple import config
 import pandas as pd
 import unittest
 
-
-
 class JiraReports:
     def __init__(self):
         self.jira_url = "https://activis.atlassian.net"

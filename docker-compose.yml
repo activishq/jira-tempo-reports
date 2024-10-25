@@ -4,7 +4,7 @@ services:
     ports:
       - "8501:8501"
     env_file:
-      - .env.docker
+      - ./config/.env.production
     volumes:
       - .:/app
     depends_on:
@@ -13,9 +13,9 @@ services:
   db:
     image: postgres:13
     environment:
-      - POSTGRES_DB=jira_reports_data
-      - POSTGRES_USER=ericferole
-      - POSTGRES_PASSWORD=pixelpixel
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./migrations:/migrations

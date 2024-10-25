@@ -53,21 +53,26 @@ class TempoReport:
         Calculate logged time for a specific user and date range.
         """
         worklogs = self.get_worklogs(start_date, end_date)
+
         time_by_issue_list = []
 
         for log in worklogs:
-            if log['author']['displayName'] == user_name:
-                issue_key = log['issue']['key']
+            try:
+                if log['author']['displayName'] == user_name:
+                    issue_key = log['issue']['key']
+                    time_spent = round(log['timeSpentSeconds'] / 3600, 2)
 
-                entry = next((item for item in time_by_issue_list if item['issue_key'] == issue_key), None)
-                if entry:
-                    entry['logged_time'] += round(log['timeSpentSeconds'] / 3600, 2)
-                else:
-                    time_by_issue_list.append({
-                        'issue_key': issue_key,
-                        'logged_time': round(log['timeSpentSeconds'] / 3600, 2),
-                        'user': user_name
-                    })
+                    entry = next((item for item in time_by_issue_list if item['issue_key'] == issue_key), None)
+                    if entry:
+                        entry['logged_time'] += time_spent
+                    else:
+                        time_by_issue_list.append({
+                            'issue_key': issue_key,
+                            'logged_time': time_spent,
+                            'user': user_name
+                        })
+            except Exception as e:
+                continue
 
         return pd.DataFrame(time_by_issue_list)
 

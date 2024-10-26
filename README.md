@@ -63,28 +63,48 @@ Ce projet est une application Streamlit qui génère des rapports d'activité ba
 ## Structure du projet
 ```
 jira-tempo-report/
-│
-├── app/
-│   ├── main.py
-│   └── pages/
-│       └── billable_hours_dashboard.py
-│
-├── reports/
-│   ├── jira_reports.py
-│   ├── tempo_reports.py
-│   └── combined_reports.py
-│
-├── scripts/
-│   ├── data_processor.py
-│   └── db_operations.py
-│
-├── tests/
-│   └── ...
-│
-├── .env
-├── .gitignore
+├── .gitlab-ci.yml
+├── Dockerfile
+├── Dockerfile.prod
+├── README.md
+├── app
+│   ├── .DS_Store
+│   ├── main.py
+│   └── pages
+├── certs
+│   └── ca-certificate.crt
+├── config
+│   ├── .env.development
+│   ├── .env.exemple
+│   ├── .env.production
+│   └── .env.test
+├── docker-compose.yml
+├── migrations
+│   ├── 001_add_availability_table.sql
+│   └── 002_add_target_table.sql
+├── reports
+│   ├── .DS_Store
+│   ├── __init__.py
+│   ├── __pycache__
+│   ├── combined_reports.py
+│   ├── jira_reports.py
+│   ├── reports.py
+│   └── tempo_reports.py
 ├── requirements.txt
-└── README.md
+├── scripts
+│   ├── __pycache__
+│   ├── clear_database.py
+│   ├── data_processor.py
+│   ├── db_operations.py
+│   ├── db_setup.py
+│   ├── populate_weekly_reports.py
+│   └── wait_for_db.py
+├── tests
+│   ├── __pycache__
+│   ├── test_jira_reports.py
+│   └── test_tempo_reports.py
+└── utils
+
 ```
 
 psql "sslmode=require host=tempo-jira-cluster-do-user-14565660-0.i.db.ondigitalocean.com port=25060 dbname=defaultdb user=doadmin password=AVNS_7R_s77uZf--fmO7JckS sslrootcert=./certs/ca-certificate.crt"

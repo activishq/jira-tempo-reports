@@ -7,10 +7,14 @@ from typing import List, Dict
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+env = os.getenv('ENVIRONMENT')
+if env not in ['test', 'development', 'production']:
+    raise ValueError("ENVIRONMENT must be one of 'test', 'development', 'production'")
+
+dot_env_path = f'config/.env.{env}'
+load_dotenv(dotenv_path=dot_env_path)
 
 JIRA_URL = "https://activis.atlassian.net"
-
 class JiraReports:
     def __init__(self):
         self.auth = HTTPBasicAuth(config('JIRA_USERNAME'), config('JIRA_API_KEY'))

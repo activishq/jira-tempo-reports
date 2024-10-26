@@ -3,7 +3,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 from decouple import config
 import pandas as pd
-from typing import List, Dict
+from typing import List
 from dotenv import load_dotenv
 import os
 

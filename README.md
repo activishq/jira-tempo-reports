@@ -10,6 +10,7 @@ Ce projet est une application Streamlit qui génère des rapports d'activité ba
 - Filtrage des données par période et par utilisateur
 - Stockage des données dans une base de données PostgreSQL
 - Traitement flexible des données pour des périodes spécifiques
+- test
 
 ## Prérequis
 - Python 3.10

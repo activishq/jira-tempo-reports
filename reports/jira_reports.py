@@ -1,118 +1,97 @@
+
+import requests
+from requests.auth import HTTPBasicAuth
+from decouple import config
 import pandas as pd
 from typing import List
-from datetime import datetime, timedelta
-from .jira_reports import JiraReports
-from .tempo_reports import TempoReport
+from dotenv import load_dotenv
+import os
 
-class JiraTempoReport:
+env = os.getenv('ENVIRONMENT')
+if env not in ['test', 'development', 'production']:
+    raise ValueError("ENVIRONMENT must be one of 'test', 'development', 'production'")
+
+dot_env_path = f'config/.env.{env}'
+load_dotenv(dotenv_path=dot_env_path)
+
+JIRA_URL = "https://activis.atlassian.net"
+class JiraReports:
     def __init__(self):
-        self.jira_report = JiraReports()
-        self.tempo_report = TempoReport()
+        self.auth = HTTPBasicAuth(config('JIRA_USERNAME'), config('JIRA_API_KEY'))
 
-    def get_merged_report(self, start_date: str, end_date: str, user_id: str) -> pd.DataFrame:
-        df_jira_report = self.jira_report.get_estimated_time(start_date, end_date, user_id)
-        df_tempo_report = self.tempo_report.get_logged_time(start_date, end_date, user_id)
+    def get_current_users(self) -> List[str]:
+        """Return a list of current users."""
+        return ['Sonia Marquette', 'Claire Conrardy', 'Benoit Leboucher',
+                'Eric Ferole', 'Laurence Cauchon', 'Julien Le Mée',
+                'David Chabot', 'Thierry Tanguay']
 
-        if df_jira_report.empty or df_tempo_report.empty:
-            print(f"Warning: Empty data for user {user_id} in the specified date range.")
-            return pd.DataFrame(columns=['Issue Key', 'Total Time Spent', 'Estimated Time', 'Period\'s Logged Time', 'Period\'s Leaked Time', 'Total Leaked Time'])
+    def get_department_availability(self) -> float:
+        """Calculate and return the total department availability."""
+        user_availabilities = {
+            'Sonia Marquette': 30,
+            'Claire Conrardy': 14,
+            'Benoit Leboucher': 37.5,
+            'Eric Ferole': 37.5,
+            'Laurence Cauchon': 37.5,
+            'Julien Le Mée': 37.5
+        }
+        return sum(user_availabilities.values())
 
-        # Fusionner les DataFrames en utilisant 'issue_key' comme clé et en spécifiant comment gérer les colonnes en double
-        df_merged = pd.merge(df_jira_report, df_tempo_report, on='issue_key', how='outer', suffixes=('_jira', '_tempo'))
+    def get_estimated_time(self, start_date: str, end_date: str, user_name: str) -> pd.DataFrame:
+        """
+        Retrieve estimated time data from Jira for a specific user and date range.
+        """
+        url = f"{JIRA_URL}/rest/api/3/search"
+        jql = f"assignee in (\"{user_name}\") AND worklogDate >= '{start_date}' AND worklogDate <= '{end_date}'"
 
-        # Nettoyer les colonnes dupliquées
-        if 'user_jira' in df_merged.columns and 'user_tempo' in df_merged.columns:
-            df_merged['user'] = df_merged['user_jira'].fillna(df_merged['user_tempo'])
-            df_merged.drop(['user_jira', 'user_tempo'], axis=1, inplace=True)
+        params = {
+            'jql': jql,
+            'fields': 'timeoriginalestimate,summary,timespent'
+        }
 
-        df_merged = df_merged.fillna(0)
+        try:
+            response = requests.get(url, params=params, auth=self.auth)
+            response.raise_for_status()
+            issues = response.json()['issues']
 
-        df_merged['Period\'s Leaked Time'] = self._calculate_period_leak_time(df_merged)
-        df_merged['Total Leaked Time'] = self._calculate_total_leaked_time(df_merged)
+            data = [
+                {
+                    'user': user_name,
+                    'issue_key': issue['key'],
+                    'timespent': (issue['fields']['timespent'] or 0) / 3600,
+                    'estimated_time': (issue['fields']['timeoriginalestimate'] or 0) / 3600
+                }
+                for issue in issues
+            ]
 
-        df_merged = df_merged.rename(columns={
-            'estimated_time': 'Estimated Time',
-            'issue_key': 'Issue Key',
-            'timespent': 'Total Time Spent',
-            'logged_time': 'Period\'s Logged Time'
-        })
+            return pd.DataFrame(data, columns=['user', 'issue_key', 'timespent', 'estimated_time'])
 
-        return df_merged
+        except requests.RequestException as e:
+            print(f"Error fetching data from Jira: {e}")
+            return pd.DataFrame()
 
-    def _calculate_period_leak_time(self, df: pd.DataFrame) -> pd.Series:
-        """Calculate the period's leaked time."""
-        return df.apply(lambda row: min(max(row['timespent'] - row['estimated_time'], 0), row['logged_time']), axis=1)
+    def get_department_total_time_spent(self, start_date: str, end_date: str) -> float:
+        """
+        Calculate the total time spent by the department for a given date range.
+        """
+        department_users = self.get_current_users()
+        department_estimates = pd.DataFrame()
 
-    def _calculate_total_leaked_time(self, df: pd.DataFrame) -> pd.Series:
-        """Calculate the total leaked time."""
-        return df.apply(lambda row: max(row['timespent'] - row['estimated_time'], 0), axis=1)
+        for user_name in department_users:
+            user_estimated_time = self.get_estimated_time(start_date, end_date, user_name)
+            department_estimates = pd.concat([department_estimates, user_estimated_time], ignore_index=True)
 
-    def get_logged_time(self, start_date: str, end_date: str, user_id: str) -> float:
-        """Get total logged time for a user in the specified date range."""
-        df_merged = self.get_merged_report(start_date, end_date, user_id)
-        return df_merged['Period\'s Logged Time'].sum()
+        return department_estimates['timespent'].sum()
 
-    def get_leaked_time(self, start_date: str, end_date: str, user_id: str) -> float:
-        """Calculate leaked time for a user in the specified date range."""
-        df_merged = self.get_merged_report(start_date, end_date, user_id)
+    def get_department_estimated_time(self, start_date: str, end_date: str) -> float:
+        """
+        Calculate the total estimated time for the department for a given date range.
+        """
+        department_users = self.get_current_users()
+        department_estimates = pd.DataFrame()
 
-        if df_merged.empty:
-            return 0
+        for user_name in department_users:
+            user_estimated_time = self.get_estimated_time(start_date, end_date, user_name)
+            department_estimates = pd.concat([department_estimates, user_estimated_time], ignore_index=True)
 
-        soutien = df_merged[df_merged['Issue Key'].str.contains('SOUTIEN', na=False)]['Period\'s Leaked Time'].sum()
-        leaked_time = df_merged['Period\'s Leaked Time'].sum()
-        total_leaked_time = leaked_time - soutien
-
-        return round(total_leaked_time, 2)
-
-    def get_billable_time(self, start_date: str, end_date: str, user_id: str) -> float:
-        """Calculate billable time for a user in the specified date range."""
-        logged_time_sum = self.get_logged_time(start_date, end_date, user_id)
-        leaked_time_sum = self.get_leaked_time(start_date, end_date, user_id)
-        billable_hours = abs(logged_time_sum - leaked_time_sum)
-
-        return billable_hours
-
-    def get_billable_ratio(self, start_date: str, end_date: str, user_id: str) -> float:
-        """Calculate billable ratio for a user in the specified date range."""
-        billable_hours = self.get_billable_time(start_date, end_date, user_id)
-        logged_time = self.get_logged_time(start_date, end_date, user_id)
-
-        if logged_time == 0:
-            print(f"Warning: No logged time for user {user_id} in the specified date range.")
-            return 0
-
-        billable_ratio = round((billable_hours / logged_time) * 100, 2)
-
-        return billable_ratio
-
-    def get_department_leaked_time(self, start_date: str, end_date: str) -> float:
-        """Calculate total leaked time for the department in the specified date range."""
-        department_users = self.jira_report.get_current_users()
-        department_leaked_time = sum(self.get_leaked_time(start_date, end_date, user_name) for user_name in department_users)
-
-        return department_leaked_time
-
-    def calculate_weekly_billable_hours(self, start_date: str, end_date: str) -> pd.DataFrame:
-        start = datetime.strptime(start_date, "%Y-%m-%d")
-        end = datetime.strptime(end_date, "%Y-%m-%d")
-
-        current_users = self.jira_report.get_current_users()
-        weekly_data = []
-
-        while start <= end:
-            week_end = start + timedelta(days=6)
-            week_end = min(week_end, end)
-
-            for user in current_users:
-                billable_time = self.get_billable_time(start.strftime("%Y-%m-%d"), week_end.strftime("%Y-%m-%d"), user)
-
-                weekly_data.append({
-                    'user': user,
-                    'week_start': start,
-                    'billable_hours': billable_time
-                })
-
-            start = week_end + timedelta(days=1)
-
-        return pd.DataFrame(weekly_data)
+        return department_estimates['estimated_time'].sum()

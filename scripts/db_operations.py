@@ -12,6 +12,7 @@ DB_NAME = os.getenv("DB_NAME")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_PORT = os.getenv("DB_PORT")
+DB_SSLMODE=os.getenv("DB_SSLMODE")
 
 
 def get_db_connection():
@@ -21,7 +22,7 @@ def get_db_connection():
         password=DB_PASSWORD,
         host=DB_HOST,
         port=DB_PORT,
-        sslmode='require'
+        sslmode=DB_SSLMODE
     )
 
 def insert_data_to_db(data: pd.DataFrame):

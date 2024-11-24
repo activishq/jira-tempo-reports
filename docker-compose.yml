@@ -4,7 +4,7 @@ services:
     ports:
       - "8501:8501"
     env_file:
-      - ./config/.env.production
+      - ./config/.env.development
     volumes:
       - .:/app
     depends_on:

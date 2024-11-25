@@ -10,8 +10,8 @@ def availability_management():
     employees = get_employees()
     selected_employee = st.selectbox("Sélectionnez un employé", employees)
 
-    # Définition de la date de début (29 juillet 2024)
-    start_date = datetime(2024, 7, 29).date()
+    # Définition de la date de début (30 septembre 2024)
+    start_date = datetime(2024, 9, 30).date()
     # Fin du trimestre (13 semaines après la date de début)
     end_date = start_date + timedelta(weeks=13)
 

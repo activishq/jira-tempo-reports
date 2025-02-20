@@ -3,6 +3,19 @@ import pandas as pd
 from datetime import datetime, timedelta
 from scripts.db_operations import get_db_connection, get_employees
 from reports.combined_reports import JiraTempoReport
+import logging
+import sys
+
+# Configuration du logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+
+logger = logging.getLogger(__name__)
 
 def get_previous_week_dates():
     today = datetime.now().date()
@@ -16,86 +29,157 @@ def format_hours(hours):
 def weekly_results_page():
     st.title("Résultats de la Semaine Précédente")
 
-    # Sélection de l'employé
-    employees = get_employees()
-    selected_employee = st.selectbox("Sélectionnez un employé", employees)
+    try:
+        # Test direct de TempoReport
+        logger.debug("Test direct de TempoReport")
+        from reports.tempo_reports import TempoReport
+        tempo = TempoReport()
+        default_start, default_end = get_previous_week_dates()
+        test_worklogs = tempo.get_worklogs(
+            default_start.strftime("%Y-%m-%d"),
+            default_end.strftime("%Y-%m-%d")
+        )
+        logger.debug(f"Test TempoReport - Nombre de worklogs: {len(test_worklogs)}")
 
-    # Sélection de la période
-    default_start, default_end = get_previous_week_dates()
-    start_date = st.date_input("Date de début", value=default_start)
-    end_date = st.date_input("Date de fin", value=default_end)
+        # DEBUG: Vérifier l'initialisation des employés
+        logger.debug("Récupération de la liste des employés...")
+        employees = get_employees()
+        logger.debug(f"Employés trouvés: {employees}")
 
-    if start_date > end_date:
-        st.error("La date de fin doit être postérieure à la date de début.")
-        return
+        selected_employee = st.selectbox("Sélectionnez un employé", employees)
+        logger.debug(f"Employé sélectionné: {selected_employee}")
 
-    # Initialisation du rapport
-    jira_tempo_report = JiraTempoReport()
+        # Sélection de la période
+        start_date = st.date_input("Date de début", value=default_start)
+        end_date = st.date_input("Date de fin", value=default_end)
+        logger.debug(f"Dates sélectionnées - Début: {start_date}, Fin: {end_date}")
 
-    # Calcul des indicateurs
-    logged_time = jira_tempo_report.get_logged_time(start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), selected_employee)
-    billable_time = jira_tempo_report.get_billable_time(start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), selected_employee)
-    non_billable_time = logged_time - billable_time
-    billable_ratio = jira_tempo_report.get_billable_ratio(start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), selected_employee)
+        if start_date > end_date:
+            st.error("La date de fin doit être postérieure à la date de début.")
+            return
 
-    # Affichage des indicateurs
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Heures enregistrées", format_hours(logged_time))
-    col2.metric("Heures facturables", format_hours(billable_time))
-    col3.metric("Heures non-facturables", format_hours(non_billable_time))
-    col4.metric("Ratio de facturation", f"{billable_ratio:.1f}%")
+        # DEBUG: Test des appels individuels
+        logger.debug("Test des appels individuels à Tempo")
+        test_logs = tempo.get_logged_time(
+            start_date.strftime("%Y-%m-%d"),
+            end_date.strftime("%Y-%m-%d"),
+            selected_employee
+        )
+        logger.debug(f"Résultat get_logged_time: {test_logs}")
 
-    # Récupération et affichage des données Jira
-    df_jira = jira_tempo_report.get_merged_report(start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), selected_employee)
+        # DEBUG: Initialisation du rapport combiné
+        logger.debug("Initialisation de JiraTempoReport...")
+        jira_tempo_report = JiraTempoReport()
+        logger.debug("JiraTempoReport initialisé avec succès")
 
-    # Sélection et renommage des colonnes pertinentes
-    df_display = df_jira[['Issue Key', 'Estimated Time', 'Total Time Spent', "Period's Logged Time", 'Total Leaked Time', "Period's Leaked Time"]]
+        # DEBUG: Calcul des indicateurs
+        logger.debug(f"Calcul des indicateurs pour {selected_employee}")
 
-    # Tri du DataFrame
-    df_display = df_display.sort_values(by="Period's Logged Time", ascending=False)
+        try:
+            logged_time = jira_tempo_report.get_logged_time(
+                start_date.strftime("%Y-%m-%d"),
+                end_date.strftime("%Y-%m-%d"),
+                selected_employee
+            )
+            logger.debug(f"Temps enregistré: {logged_time}")
+        except Exception as e:
+            logger.error(f"Erreur dans get_logged_time: {str(e)}")
+            raise
 
-    numeric_columns = ['Estimated Time', 'Total Time Spent', "Period's Logged Time", 'Total Leaked Time', "Period's Leaked Time"]
-    for col in numeric_columns:
-        df_display[col] = df_display[col].round(1)
+        try:
+            billable_time = jira_tempo_report.get_billable_time(
+                start_date.strftime("%Y-%m-%d"),
+                end_date.strftime("%Y-%m-%d"),
+                selected_employee
+            )
+            logger.debug(f"Temps facturable: {billable_time}")
+        except Exception as e:
+            logger.error(f"Erreur dans get_billable_time: {str(e)}")
+            raise
 
-    base_url = "https://activis.atlassian.net/browse/"  # Remplacez ceci par l'URL de base de votre instance Jira
-    df_display['URL'] = base_url + df_display['Issue Key']
+        non_billable_time = logged_time - billable_time
+        logger.debug(f"Temps non facturable: {non_billable_time}")
 
+        billable_ratio = jira_tempo_report.get_billable_ratio(
+            start_date.strftime("%Y-%m-%d"),
+            end_date.strftime("%Y-%m-%d"),
+            selected_employee
+        )
+        logger.debug(f"Ratio de facturation: {billable_ratio}")
 
-    st.subheader("Détails des Issues Jira")
-    st.dataframe(
-        df_display,
-        column_config={
-            "Issue Key": "Issue",
-            "Estimated Time": st.column_config.NumberColumn(
-                "Temps estimé",
-                help="Temps estimé pour l'issue",
-                format="%.1f h"
-            ),
-            "Total Time Spent": st.column_config.NumberColumn(
-                "Temps total passé",
-                help="Temps total passé sur l'issue",
-                format="%.1f h"
-            ),
-            "Period's Logged Time": st.column_config.NumberColumn(
-                "Temps enregistré (période)",
-                help="Temps enregistré pour la période sélectionnée",
-                format="%.1f h"
-            ),
-            "Total Leaked Time": st.column_config.NumberColumn(
-                "Temps de fuite total",
-                help="Temps de fuite total pour l'issue",
-                format="%.1f h"
-            ),
-            "Period's Leaked Time": st.column_config.NumberColumn(
-                "Temps de fuite (période)",
-                help="Temps de fuite pour la période sélectionnée",
-                format="%.1f h"
-            ),
-            "URL": st.column_config.LinkColumn("Lien Jira")
-        },
-        hide_index=True, use_container_width=True
-    )
+        # Affichage des indicateurs
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Heures enregistrées", format_hours(logged_time))
+        col2.metric("Heures facturables", format_hours(billable_time))
+        col3.metric("Heures non-facturables", format_hours(non_billable_time))
+        col4.metric("Ratio de facturation", f"{billable_ratio:.1f}%")
+
+        # DEBUG: Récupération des données Jira
+        logger.debug("Récupération des données Jira...")
+        df_jira = jira_tempo_report.get_merged_report(
+            start_date.strftime("%Y-%m-%d"),
+            end_date.strftime("%Y-%m-%d"),
+            selected_employee
+        )
+        logger.debug(f"Données récupérées: {len(df_jira)} lignes")
+        logger.debug("Aperçu des données:")
+        logger.debug(df_jira.head())
+
+        if df_jira.empty:
+            st.warning("Aucune donnée trouvée pour la période sélectionnée.")
+            return
+
+        # Sélection et renommage des colonnes pertinentes
+        df_display = df_jira[['Issue Key', 'Estimated Time', 'Total Time Spent',
+                             "Period's Logged Time", 'Total Leaked Time', "Period's Leaked Time"]]
+
+        # Tri du DataFrame
+        df_display = df_display.sort_values(by="Period's Logged Time", ascending=False)
+
+        base_url = "https://activis.atlassian.net/browse/"
+        df_display['URL'] = base_url + df_display['Issue Key']
+
+        st.subheader("Détails des Issues Jira")
+        st.dataframe(
+            df_display,
+            column_config={
+                "Issue Key": "Issue",
+                "Estimated Time": st.column_config.NumberColumn(
+                    "Temps estimé",
+                    help="Temps estimé pour l'issue",
+                    format="%.1f h"
+                ),
+                "Total Time Spent": st.column_config.NumberColumn(
+                    "Temps total passé",
+                    help="Temps total passé sur l'issue",
+                    format="%.1f h"
+                ),
+                "Period's Logged Time": st.column_config.NumberColumn(
+                    "Temps enregistré (période)",
+                    help="Temps enregistré pour la période sélectionnée",
+                    format="%.1f h"
+                ),
+                "Total Leaked Time": st.column_config.NumberColumn(
+                    "Temps de fuite total",
+                    help="Temps de fuite total pour l'issue",
+                    format="%.1f h"
+                ),
+                "Period's Leaked Time": st.column_config.NumberColumn(
+                    "Temps de fuite (période)",
+                    help="Temps de fuite pour la période sélectionnée",
+                    format="%.1f h"
+                ),
+                "URL": st.column_config.LinkColumn("Lien Jira")
+            },
+            hide_index=True,
+            use_container_width=True
+        )
+
+    except Exception as e:
+        logger.error(f"Erreur détectée: {str(e)}")
+        import traceback
+        logger.error(f"Traceback complet:\n{traceback.format_exc()}")
+        st.error(f"Une erreur s'est produite: {str(e)}")
 
 if __name__ == "__main__":
     weekly_results_page()

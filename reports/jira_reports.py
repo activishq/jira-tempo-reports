@@ -1,3 +1,5 @@
+# Obsolete code, kept for reference
+# This code is not used in the project
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -13,6 +15,8 @@ if env not in ['test', 'development', 'production']:
 
 dot_env_path = f'config/.env.{env}'
 load_dotenv(dotenv_path=dot_env_path)
+
+print(dot_env_path)
 
 JIRA_URL = "https://activis.atlassian.net"
 class JiraReports:
@@ -36,6 +40,19 @@ class JiraReports:
             'Julien Le Mée': 37.5
         }
         return sum(user_availabilities.values())
+
+    def get_users_mapping(self) -> dict:
+        """Returns a dictionary mapping displayName to accountId for current users."""
+        return {
+            'Sonia Marquette': '557058:32b276cf-1a9f-4fd5-9dc9-067ddca36ed4',
+            'Claire Conrardy': '557058:74a3c4c3-38aa-4201-b5d9-478462777444',
+            'Benoit Leboucher': '557058:e1f0069a-5123-4cfa-98c2-de32588aed26',
+            'Eric Ferole': '557058:f29b0c56-f018-47c6-af4f-f6f44ba03bb4',
+            'Laurence Cauchon': '557058:eba24c3e-0273-4c27-bf2b-661215620795',
+            'Julien Le Mée': '557058:eddec97e-7457-47dc-91c7-06907ee8ef9f',
+            'David Chabot': '557058:x29b0c56-x018-47c6-af4f-f6f44ba03bb4',
+            'Thierry Tanguay': '557058:y29b0c56-y018-47c6-af4f-f6f44ba03bb4'
+        }
 
     def get_estimated_time(self, start_date: str, end_date: str, user_name: str) -> pd.DataFrame:
         """
@@ -95,3 +112,40 @@ class JiraReports:
             department_estimates = pd.concat([department_estimates, user_estimated_time], ignore_index=True)
 
         return department_estimates['estimated_time'].sum()
+
+    def get_user_account_id(self, display_name: str) -> str:
+        """
+        Récupère l'accountId d'un utilisateur à partir de son nom d'affichage.
+        """
+        url = f"{JIRA_URL}/rest/api/3/user/search"
+        params = {
+            'query': display_name
+        }
+        try:
+            response = requests.get(url, params=params, auth=self.auth)
+            response.raise_for_status()
+            users = response.json()
+
+            # Chercher une correspondance exacte
+            for user in users:
+                if user.get('displayName') == display_name:
+                    return user.get('accountId')
+
+            return None
+        except requests.RequestException as e:
+            print(f"Erreur lors de la récupération de l'accountId: {e}")
+            return None
+
+    def get_issue_key_from_id(self, issue_id: str) -> str:
+        """
+        Récupère la clé du ticket à partir de son ID.
+        """
+        url = f"{JIRA_URL}/rest/api/3/issue/{issue_id}"
+        try:
+            response = requests.get(url, auth=self.auth)
+            response.raise_for_status()
+            issue_data = response.json()
+            return issue_data.get('key')
+        except requests.RequestException as e:
+            print(f"Erreur lors de la récupération de la clé du ticket: {e}")
+            return None

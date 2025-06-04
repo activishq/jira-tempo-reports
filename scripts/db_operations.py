@@ -87,8 +87,6 @@ def verify_data_in_db(start_date: datetime, end_date: datetime):
             for record in cur.fetchall():
                 print(record)
 
-# Les autres fonctions restent inchangées
-
 def insert_availability(employee_id: str, week_start: datetime, budget_hours: float):
     with get_db_connection() as conn:
         with conn.cursor() as cur:

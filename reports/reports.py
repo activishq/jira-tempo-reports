@@ -1,3 +1,6 @@
+# Obsolete code, kept for reference
+# This code is not used in the project
+
 import requests
 from requests.auth import HTTPBasicAuth
 from decouple import config
@@ -10,7 +13,10 @@ class JiraReports:
         self.auth = HTTPBasicAuth(config('JIRA_USERNAME'), config('JIRA_API_KEY'))
 
     def get_current_users(self):
-        users = ['Sonia Marquette', 'Claire Conrardy', 'Benoit Leboucher', 'Eric Ferole', 'Laurence Cauchon', 'Julien Le Mée', 'David Chabot', 'Thierry Tanguay']
+        users = ['Sonia Marquette', 'Claire Conrardy', 'Benoit Leboucher', 'Eric Ferole', 'Laurence Cauchon',
+                 'Julien Le Mée', 'David Chabot', 'Thierry Tanguay', 'Jeff Trempe', 'Nancy L. Rodriguez',
+                 'Simon Bouchard', 'Evan Buckiewicz',
+                 ]
         return users
 
     def get_users_mapping(self) -> dict:
@@ -23,7 +29,11 @@ class JiraReports:
             'Laurence Cauchon': '557058:eba24c3e-0273-4c27-bf2b-661215620795',
             'Julien Le Mée': '557058:eddec97e-7457-47dc-91c7-06907ee8ef9f',
             'David Chabot': '557058:x29b0c56-x018-47c6-af4f-f6f44ba03bb4',
-            'Thierry Tanguay': '557058:y29b0c56-y018-47c6-af4f-f6f44ba03bb4'
+            'Thierry Tanguay': '557058:y29b0c56-y018-47c6-af4f-f6f44ba03bb4',
+            'Simon Bouchard': '712020:32ea8dc5-c696-4365-be1b-2ac476c34039',
+            'Nancy L. Rodriguez': '712020:b0bfc929-6691-4ce9-8152-32cb07b51b27',
+            'Jeff Trempe': '712020:dc3a2115-d8ee-4d15-a38b-c1978136c148',
+            'Evan Buckiewicz': '712020:d951992c-717d-4485-bc35-a459cef088db'
         }
 
     def get_department_availability(self):
@@ -33,7 +43,12 @@ class JiraReports:
             'Benoit Leboucher': 37.5,
             'Eric Ferole': 37.5,
             'Laurence Cauchon': 37.5,
-            'Julien Le Mée': 37.5
+            'Julien Le Mée': 37.5,
+            'David Chabot': 37.5,
+            'Thierry Tanguay': 37.5,
+            'Nancy L. Rodriguez': 37.5,
+            'Simon Bouchard': 37.5,
+            'Jeff Trempe': 37.5
         }
         total_availabilities = sum(user_availabilities.values())
         return total_availabilities

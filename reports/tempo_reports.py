@@ -55,51 +55,6 @@ class TempoReport:
 
         return all_worklogs
 
-
-    # def get_worklogs(self, start_date: str, end_date: str, user_name: Optional[str] = None) -> List[Dict]:
-    #     """
-    #     Retrieve worklogs from Tempo for a given date range and user.
-    #     """
-    #     all_worklogs = []
-    #     page_index = 0
-    #     page_size = 50
-
-    #     while True:
-    #         params = {
-    #             'from': start_date,
-    #             'to': end_date,
-    #             'limit': page_size,
-    #             'offset': page_index * page_size
-    #         }
-    #         if user_name:
-    #             params['workerId'] = user_name
-
-    #         try:
-    #             response = self.session.get(self.base_url, params=params)
-    #             response.raise_for_status()
-    #             data = response.json()
-    #             worklogs = data.get('results', [])
-
-    #             logger.debug(f"Page {page_index + 1}: {len(worklogs)} worklogs récupérés")
-
-    #             # Log du premier worklog de chaque page pour vérifier la structure
-    #             if worklogs:
-    #                 logger.debug(f"Structure d'un worklog exemple: {worklogs[0]}")
-
-    #             all_worklogs.extend(worklogs)
-
-    #             if 'metadata' in data and 'next' in data['metadata']:
-    #                 page_index += 1
-    #             else:
-    #                 break
-
-    #         except requests.RequestException as e:
-    #             logger.error(f"Erreur lors de la récupération des worklogs: {e}")
-    #             break
-
-    #     logger.debug(f"Total des worklogs récupérés: {len(all_worklogs)}")
-    #     return all_worklogs
-
     def _get_issue_keys_batch(self, issue_ids: List[str], jira) -> dict:
         """Récupère les clés de tickets en batch"""
         uncached_ids = [id for id in issue_ids if id not in self.issue_key_cache]
@@ -108,7 +63,6 @@ class TempoReport:
             if key:
                 self.issue_key_cache[issue_id] = key
         return self.issue_key_cache
-
 
     def get_worklogs(self, start_date: str, end_date: str, user_name: str = None) -> List[Dict]:
         all_worklogs = []
@@ -150,51 +104,6 @@ class TempoReport:
 
         print(f"Total worklogs retrieved: {len(all_worklogs)}")
         return all_worklogs
-
-    # def get_logged_time(self, start_date: str, end_date: str, user_name: str) -> pd.DataFrame:
-    #     """
-    #     Récupère les temps enregistrés pour un utilisateur sur une période donnée.
-    #     """
-    #     # Initialiser JiraReports pour les requêtes Jira
-    #     jira = JiraReports()
-    #     user_account_id = jira.get_user_account_id(user_name)
-
-    #     if not user_account_id:
-    #         print(f"Impossible de trouver l'accountId pour {user_name}")
-    #         return pd.DataFrame()
-
-    #     worklogs = self.get_worklogs(start_date, end_date)
-    #     time_by_issue_list = []
-
-    #     for log in worklogs:
-    #         try:
-    #             if log['author']['accountId'] == user_account_id:
-    #                 # Extraire l'ID du ticket de l'URL
-    #                 issue_id = log['issue']['id']
-    #                 # Obtenir la vraie clé du ticket
-    #                 issue_key = jira.get_issue_key_from_id(str(issue_id))
-
-    #                 if not issue_key:
-    #                     print(f"Impossible de trouver la clé pour le ticket ID {issue_id}")
-    #                     continue
-
-    #                 time_spent = round(log['timeSpentSeconds'] / 3600, 2)
-
-    #                 entry = next((item for item in time_by_issue_list if item['issue_key'] == issue_key), None)
-    #                 if entry:
-    #                     entry['logged_time'] += time_spent
-    #                 else:
-    #                     time_by_issue_list.append({
-    #                         'issue_key': issue_key,
-    #                         'logged_time': time_spent,
-    #                         'user': user_name
-    #                     })
-
-    #         except Exception as e:
-    #             print(f"Erreur lors du traitement d'un worklog: {e}")
-    #             continue
-
-    #     return pd.DataFrame(time_by_issue_list)
 
     def get_logged_time(self, start_date: str, end_date: str, user_name: str) -> pd.DataFrame:
         jira = JiraReports()

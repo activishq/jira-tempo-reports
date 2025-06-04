@@ -1,5 +1,3 @@
-# Obsolete code, kept for reference
-# This code is not used in the project
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -27,7 +25,7 @@ class JiraReports:
         """Return a list of current users."""
         return ['Sonia Marquette', 'Claire Conrardy', 'Benoit Leboucher',
                 'Eric Ferole', 'Laurence Cauchon', 'Julien Le Mée',
-                'David Chabot', 'Thierry Tanguay']
+                'David Chabot', 'Thierry Tanguay', 'Jeff Trempe']
 
     def get_department_availability(self) -> float:
         """Calculate and return the total department availability."""
@@ -51,7 +49,8 @@ class JiraReports:
             'Laurence Cauchon': '557058:eba24c3e-0273-4c27-bf2b-661215620795',
             'Julien Le Mée': '557058:eddec97e-7457-47dc-91c7-06907ee8ef9f',
             'David Chabot': '557058:x29b0c56-x018-47c6-af4f-f6f44ba03bb4',
-            'Thierry Tanguay': '557058:y29b0c56-y018-47c6-af4f-f6f44ba03bb4'
+            'Thierry Tanguay': '557058:y29b0c56-y018-47c6-af4f-f6f44ba03bb4',
+            'Jeff Trempe': '712020:dc3a2115-d8ee-4d15-a38b-c1978136c148'
         }
 
     def get_estimated_time(self, start_date: str, end_date: str, user_name: str) -> pd.DataFrame:

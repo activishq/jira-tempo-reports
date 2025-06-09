@@ -25,7 +25,7 @@ class JiraReports:
             'Sonia Marquette': '557058:32b276cf-1a9f-4fd5-9dc9-067ddca36ed4',
             'Claire Conrardy': '557058:74a3c4c3-38aa-4201-b5d9-478462777444',
             'Benoit Leboucher': '557058:e1f0069a-5123-4cfa-98c2-de32588aed26',
-            'Eric Ferole': '557058:f29b0c56-f018-47c6-af4f-f6f44ba03bb4',
+            'Eric Ferole': '61957639b43d5b006aa771c8',
             'Laurence Cauchon': '557058:eba24c3e-0273-4c27-bf2b-661215620795',
             'Julien Le Mée': '557058:eddec97e-7457-47dc-91c7-06907ee8ef9f',
             'David Chabot': '557058:x29b0c56-x018-47c6-af4f-f6f44ba03bb4',

@@ -1,4 +1,3 @@
-
 import requests
 from requests.auth import HTTPBasicAuth
 from decouple import config
@@ -25,7 +24,7 @@ class JiraReports:
         """Return a list of current users."""
         return ['Sonia Marquette', 'Claire Conrardy', 'Benoit Leboucher',
                 'Eric Ferole', 'Laurence Cauchon', 'Julien Le Mée',
-                'David Chabot', 'Thierry Tanguay', 'Jeff Trempe']
+                'David Chabot', 'Thierry Tanguay', 'Jeff Trempe', 'David Cazal']
 
     def get_department_availability(self) -> float:
         """Calculate and return the total department availability."""
@@ -35,7 +34,8 @@ class JiraReports:
             'Benoit Leboucher': 37.5,
             'Eric Ferole': 37.5,
             'Laurence Cauchon': 37.5,
-            'Julien Le Mée': 37.5
+            'Julien Le Mée': 37.5,
+            'David Cazal': 37.5
         }
         return sum(user_availabilities.values())
 
@@ -50,7 +50,8 @@ class JiraReports:
             'Julien Le Mée': '557058:eddec97e-7457-47dc-91c7-06907ee8ef9f',
             'David Chabot': '557058:x29b0c56-x018-47c6-af4f-f6f44ba03bb4',
             'Thierry Tanguay': '557058:y29b0c56-y018-47c6-af4f-f6f44ba03bb4',
-            'Jeff Trempe': '712020:dc3a2115-d8ee-4d15-a38b-c1978136c148'
+            'Jeff Trempe': '712020:dc3a2115-d8ee-4d15-a38b-c1978136c148',
+            'David Cazal': '712020:6d7bad8f-2de8-4ca0-bd29-5d3ba83dec44'
         }
 
     def get_estimated_time(self, start_date: str, end_date: str, user_name: str) -> pd.DataFrame:

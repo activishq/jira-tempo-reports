@@ -23,7 +23,8 @@ class JiraTempoReport:
             'Simon Bouchard': '712020:32ea8dc5-c696-4365-be1b-2ac476c34039',
             'Nancy L. Rodriguez': '712020:b0bfc929-6691-4ce9-8152-32cb07b51b27',
             'Jeff Trempe': '712020:dc3a2115-d8ee-4d15-a38b-c1978136c148',
-            'Evan Buckiewicz': '712020:d951992c-717d-4485-bc35-a459cef088db'
+            'Evan Buckiewicz': '712020:d951992c-717d-4485-bc35-a459cef088db',
+            'David Cazal': '712020:6d7bad8f-2de8-4ca0-bd29-5d3ba83dec44'
         }
 
     def get_merged_report(self, start_date: str, end_date: str, user_id: str) -> pd.DataFrame:

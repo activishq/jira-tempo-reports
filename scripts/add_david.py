@@ -28,26 +28,26 @@ def add_david_to_db():
                 # Vérifier si David existe déjà
                 cur.execute("""
                     SELECT COUNT(*) FROM employees WHERE employee_id = %s
-                """, ('David Chabot',))
+                """, ('David Cazal',))
 
                 count = cur.fetchone()[0]
 
                 if count > 0:
-                    print("David Chabot existe déjà dans la base de données.")
+                    print("David Cazal existe déjà dans la base de données.")
                     return
 
-                # Ajouter David Chabot
+                # Ajouter David Cazal
                 cur.execute("""
                     INSERT INTO employees (employee_id, full_name, email)
                     VALUES (%s, %s, %s)
                     ON CONFLICT (employee_id) DO NOTHING
-                """, ('David Chabot', 'David Chabot', 'dchabot@activis.ca'))
+                """, ('David Cazal', 'David Cazal', 'dcazal@activis.ca'))
 
                 conn.commit()
-                print("David Chabot a été ajouté à la base de données.")
+                print("David Cazal a été ajouté à la base de données.")
 
     except Exception as e:
-        print(f"Erreur lors de l'ajout de David Chabot : {e}")
+        print(f"Erreur lors de l'ajout de David Cazal : {e}")
         raise
 
 if __name__ == "__main__":

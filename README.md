@@ -123,3 +123,7 @@ Les contributions à ce projet sont les bienvenues. Veuillez suivre ces étapes 
 Eric Ferole - [eferole@activis.ca](mailto:eferole@activis.ca)
 
 Lien du projet : [https://github.com/votre-nom/jira-tempo-report](https://github.com/activishq/jira-tempo-reports)
+
+
+## Deployment
+

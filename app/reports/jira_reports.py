@@ -7,6 +7,7 @@ from constants import (
     JIRA_USERNAME,
     JIRA_API_KEY,
 )
+from .helpers import JiraApi
 
 
 env = os.getenv('ENVIRONMENT')
@@ -14,12 +15,8 @@ if env not in ['test', 'development', 'production']:
     raise ValueError("ENVIRONMENT must be one of 'test', 'development', 'production'")
 
 
-JIRA_URL = "https://activis.atlassian.net"
 class JiraReports:
     # called by main
-    def __init__(self):
-        self.auth = HTTPBasicAuth(JIRA_USERNAME, JIRA_API_KEY)
-
     def get_current_users(self) -> List[str]:
         """Return a list of current users."""
         return ['Sonia Marquette', 'Claire Conrardy', 'Benoit Leboucher',
@@ -58,7 +55,6 @@ class JiraReports:
         """
         Retrieve estimated time data from Jira for a specific user and date range.
         """
-        url = f"{JIRA_URL}/rest/api/3/search"
         jql = f"assignee in (\"{user_name}\") AND worklogDate >= '{start_date}' AND worklogDate <= '{end_date}'"
 
         params = {
@@ -67,7 +63,7 @@ class JiraReports:
         }
 
         try:
-            response = requests.get(url, params=params, auth=self.auth)
+            response = JiraApi.search(params)
             response.raise_for_status()
             issues = response.json()['issues']
 
@@ -117,12 +113,11 @@ class JiraReports:
         """
         Récupère l'accountId d'un utilisateur à partir de son nom d'affichage.
         """
-        url = f"{JIRA_URL}/rest/api/3/user/search"
         params = {
             'query': display_name
         }
         try:
-            response = requests.get(url, params=params, auth=self.auth)
+            response = JiraApi.user_search(params)
             response.raise_for_status()
             users = response.json()
 
@@ -140,9 +135,8 @@ class JiraReports:
         """
         Récupère la clé du ticket à partir de son ID.
         """
-        url = f"{JIRA_URL}/rest/api/3/issue/{issue_id}"
         try:
-            response = requests.get(url, auth=self.auth)
+            response = JiraApi.get_issue(issue_id)
             response.raise_for_status()
             issue_data = response.json()
             return issue_data.get('key')

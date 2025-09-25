@@ -8,7 +8,7 @@ from constants import (
 
 
 class JiraApi:
-    url = "https://activis.atlassian.net"
+    base_url = "https://activis.atlassian.net"
     headers = {
         "Accept": "application/json"
     }
@@ -22,10 +22,26 @@ class JiraApi:
             headers=cls.headers
 
         )
-        return requests.get(cls.__url, params=params, auth=cls.__auth)
+        return requests.get(cls.base_url, params=params, auth=cls.__auth)
     
     @classmethod
     def search(cls, params):
-        
-        return requests.get(cls.__url+'/rest/api/3/search', params=params, auth=cls.__auth)
+        url = f"{cls.base_url}/rest/api/3/search/jql"
+        return requests.request(
+            "GET",
+            url,
+            headers=cls.headers,
+            params=params,
+            auth=cls.auth
+        )
+    
+    @classmethod
+    def user_search(cls, params):
+        url = f"{cls.base_url}/rest/api/3/user/search"
+        return requests.get(url, params=params, auth=cls.auth)
+    
+    @classmethod
+    def get_issue(cls, issue_id):
+        url = f"{cls.base_url}/rest/api/3/issue/{issue_id}"
+        return requests.get(url, auth=cls.auth)
     

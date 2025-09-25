@@ -63,16 +63,16 @@ def availability_management():
         st.warning("Veuillez sélectionner un employé pour gérer son budget.")
 
 def save_budget_and_target(employee_id, budget_df):
-    print(f"Saving budget and target for employee {employee_id}")
-    print(f"Budget and target data:\n{budget_df}")
+    # print(f"Saving budget and target for employee {employee_id}")
+    # print(f"Budget and target data:\n{budget_df}")
     for _, row in budget_df.iterrows():
         week_start = row['Week']
         budget_hours = float(row['Disponibilité'])
         target_hours = float(row['Target'])
-        print(f"Inserting: {employee_id}, {week_start}, Budget: {budget_hours}, Target: {target_hours}")
+        # print(f"Inserting: {employee_id}, {week_start}, Budget: {budget_hours}, Target: {target_hours}")
         insert_availability(employee_id, week_start, budget_hours)
         insert_target(employee_id, week_start, target_hours)
-    print("Budget and target save completed")
+    # print("Budget and target save completed")
 
 if __name__ == "__main__":
     availability_management()

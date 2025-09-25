@@ -1,5 +1,5 @@
 import streamlit as st
-import pandas as pd
+# import pandas as pd
 from datetime import datetime, timedelta
 from scripts.db_operations import get_db_connection, get_employees
 from reports.combined_reports import JiraTempoReport
@@ -32,13 +32,13 @@ def weekly_results_page():
     try:
         # Test direct de TempoReport
         # logger.debug("Test direct de TempoReport")
-        from reports.tempo_reports import TempoReport
-        tempo = TempoReport()
+        # from reports.tempo_reports import TempoReport
+        # tempo = TempoReport()
         default_start, default_end = get_previous_week_dates()
-        test_worklogs = tempo.get_worklogs(
-            default_start.strftime("%Y-%m-%d"),
-            default_end.strftime("%Y-%m-%d")
-        )
+        # test_worklogs = tempo.get_worklogs(
+        #     default_start.strftime("%Y-%m-%d"),
+        #     default_end.strftime("%Y-%m-%d")
+        # )
         # logger.debug(f"Test TempoReport - Nombre de worklogs: {len(test_worklogs)}")
 
         # DEBUG: Vérifier l'initialisation des employés
@@ -60,11 +60,11 @@ def weekly_results_page():
 
         # DEBUG: Test des appels individuels
         # logger.debug("Test des appels individuels à Tempo")
-        test_logs = tempo.get_logged_time(
-            start_date.strftime("%Y-%m-%d"),
-            end_date.strftime("%Y-%m-%d"),
-            selected_employee
-        )
+        # test_logs = tempo.get_logged_time(
+        #     start_date.strftime("%Y-%m-%d"),
+        #     end_date.strftime("%Y-%m-%d"),
+        #     selected_employee
+        # )
         # logger.debug(f"Résultat get_logged_time: {test_logs}")
 
         # DEBUG: Initialisation du rapport combiné

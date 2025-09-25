@@ -13,16 +13,6 @@ class JiraApi:
         "Accept": "application/json"
     }
     auth = HTTPBasicAuth(JIRA_USERNAME, JIRA_API_KEY)
-
-    @classmethod
-    def get(cls, params):
-        return requests.request(
-            'GET',
-            cls.url,
-            headers=cls.headers
-
-        )
-        return requests.get(cls.base_url, params=params, auth=cls.__auth)
     
     @classmethod
     def search(cls, params):

@@ -83,31 +83,31 @@ class JiraReports:
             print(f"Error fetching data from Jira: {e}")
             return pd.DataFrame()
 
-    def get_department_total_time_spent(self, start_date: str, end_date: str) -> float:
-        """
-        Calculate the total time spent by the department for a given date range.
-        """
-        department_users = self.get_current_users()
-        department_estimates = pd.DataFrame()
+    # def get_department_total_time_spent(self, start_date: str, end_date: str) -> float:
+    #     """
+    #     Calculate the total time spent by the department for a given date range.
+    #     """
+    #     department_users = self.get_current_users()
+    #     department_estimates = pd.DataFrame()
 
-        for user_name in department_users:
-            user_estimated_time = self.get_estimated_time(start_date, end_date, user_name)
-            department_estimates = pd.concat([department_estimates, user_estimated_time], ignore_index=True)
+    #     for user_name in department_users:
+    #         user_estimated_time = self.get_estimated_time(start_date, end_date, user_name)
+    #         department_estimates = pd.concat([department_estimates, user_estimated_time], ignore_index=True)
 
-        return department_estimates['timespent'].sum()
+    #     return department_estimates['timespent'].sum()
 
-    def get_department_estimated_time(self, start_date: str, end_date: str) -> float:
-        """
-        Calculate the total estimated time for the department for a given date range.
-        """
-        department_users = self.get_current_users()
-        department_estimates = pd.DataFrame()
+    # def get_department_estimated_time(self, start_date: str, end_date: str) -> float:
+    #     """
+    #     Calculate the total estimated time for the department for a given date range.
+    #     """
+    #     department_users = self.get_current_users()
+    #     department_estimates = pd.DataFrame()
 
-        for user_name in department_users:
-            user_estimated_time = self.get_estimated_time(start_date, end_date, user_name)
-            department_estimates = pd.concat([department_estimates, user_estimated_time], ignore_index=True)
+    #     for user_name in department_users:
+    #         user_estimated_time = self.get_estimated_time(start_date, end_date, user_name)
+    #         department_estimates = pd.concat([department_estimates, user_estimated_time], ignore_index=True)
 
-        return department_estimates['estimated_time'].sum()
+    #     return department_estimates['estimated_time'].sum()
 
     def get_user_account_id(self, display_name: str) -> str:
         """

@@ -112,12 +112,12 @@ class JiraTempoReport:
 
         return billable_ratio
 
-    def get_department_leaked_time(self, start_date: str, end_date: str) -> float:
-        """Calculate total leaked time for the department in the specified date range."""
-        department_users = self.jira_report.get_current_users()
-        department_leaked_time = sum(self.get_leaked_time(start_date, end_date, user_name) for user_name in department_users)
+    # def get_department_leaked_time(self, start_date: str, end_date: str) -> float:
+    #     """Calculate total leaked time for the department in the specified date range."""
+    #     department_users = self.jira_report.get_current_users()
+    #     department_leaked_time = sum(self.get_leaked_time(start_date, end_date, user_name) for user_name in department_users)
 
-        return department_leaked_time
+    #     return department_leaked_time
 
     def calculate_weekly_billable_hours(self, start_date: str, end_date: str) -> pd.DataFrame:
         start = datetime.strptime(start_date, "%Y-%m-%d")

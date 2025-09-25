@@ -3,30 +3,13 @@ from typing import List
 from datetime import datetime, timedelta
 from .jira_reports import JiraReports
 from .tempo_reports import TempoReport
+from .helpers import Employees
 
 class JiraTempoReport:
     # called
     def __init__(self):
         self.jira_report = JiraReports()
         self.tempo_report = TempoReport()
-
-    def get_users_mapping(self) -> dict:
-        """Returns a dictionary mapping displayName to accountId for current users."""
-        return {
-            'Sonia Marquette': '557058:32b276cf-1a9f-4fd5-9dc9-067ddca36ed4',
-            'Claire Conrardy': '557058:74a3c4c3-38aa-4201-b5d9-478462777444',
-            'Benoit Leboucher': '557058:e1f0069a-5123-4cfa-98c2-de32588aed26',
-            'Eric Ferole': '61957639b43d5b006aa771c8',
-            'Laurence Cauchon': '557058:eba24c3e-0273-4c27-bf2b-661215620795',
-            'Julien Le Mée': '557058:eddec97e-7457-47dc-91c7-06907ee8ef9f',
-            'David Chabot': '557058:x29b0c56-x018-47c6-af4f-f6f44ba03bb4',
-            'Thierry Tanguay': '557058:y29b0c56-y018-47c6-af4f-f6f44ba03bb4',
-            'Simon Bouchard': '712020:32ea8dc5-c696-4365-be1b-2ac476c34039',
-            'Nancy L. Rodriguez': '712020:b0bfc929-6691-4ce9-8152-32cb07b51b27',
-            'Jeff Trempe': '712020:dc3a2115-d8ee-4d15-a38b-c1978136c148',
-            'Evan Buckiewicz': '712020:d951992c-717d-4485-bc35-a459cef088db',
-            'David Cazal': '712020:6d7bad8f-2de8-4ca0-bd29-5d3ba83dec44'
-        }
 
     def get_merged_report(self, start_date: str, end_date: str, user_id: str) -> pd.DataFrame:
         df_jira_report = self.jira_report.get_estimated_time(start_date, end_date, user_id)
@@ -67,9 +50,7 @@ class JiraTempoReport:
 
     def get_logged_time(self, start_date: str, end_date: str, user_name: str) -> float:
         """Get total logged time for a user in the specified date range."""
-        # Get user mapping
-        user_mapping = self.get_users_mapping()
-        user_account_id = user_mapping.get(user_name)
+        user_account_id = Employees.get_user_account_id(user_name)
 
         if not user_account_id:
             print(f"Warning: No account ID found for user {user_name}")
@@ -119,26 +100,26 @@ class JiraTempoReport:
 
     #     return department_leaked_time
 
-    def calculate_weekly_billable_hours(self, start_date: str, end_date: str) -> pd.DataFrame:
-        start = datetime.strptime(start_date, "%Y-%m-%d")
-        end = datetime.strptime(end_date, "%Y-%m-%d")
+    # def calculate_weekly_billable_hours(self, start_date: str, end_date: str) -> pd.DataFrame:
+    #     start = datetime.strptime(start_date, "%Y-%m-%d")
+    #     end = datetime.strptime(end_date, "%Y-%m-%d")
 
-        current_users = self.jira_report.get_current_users()
-        weekly_data = []
+    #     current_users = self.jira_report.get_current_users()
+    #     weekly_data = []
 
-        while start <= end:
-            week_end = start + timedelta(days=6)
-            week_end = min(week_end, end)
+    #     while start <= end:
+    #         week_end = start + timedelta(days=6)
+    #         week_end = min(week_end, end)
 
-            for user in current_users:
-                billable_time = self.get_billable_time(start.strftime("%Y-%m-%d"), week_end.strftime("%Y-%m-%d"), user)
+    #         for user in current_users:
+    #             billable_time = self.get_billable_time(start.strftime("%Y-%m-%d"), week_end.strftime("%Y-%m-%d"), user)
 
-                weekly_data.append({
-                    'user': user,
-                    'week_start': start,
-                    'billable_hours': billable_time
-                })
+    #             weekly_data.append({
+    #                 'user': user,
+    #                 'week_start': start,
+    #                 'billable_hours': billable_time
+    #             })
 
-            start = week_end + timedelta(days=1)
+    #         start = week_end + timedelta(days=1)
 
-        return pd.DataFrame(weekly_data)
+    #     return pd.DataFrame(weekly_data)

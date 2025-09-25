@@ -1,5 +1,4 @@
 import streamlit as st
-# import pandas as pd
 from datetime import datetime, timedelta
 from scripts.db_operations import get_db_connection, get_employees
 from reports.combined_reports import JiraTempoReport

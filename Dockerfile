@@ -20,7 +20,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copier le script d'attente pour la base de données
-COPY scripts /app/scripts
+# COPY scripts /app/scripts
 
 # Copier le reste du code de l'application dans le conteneur
 COPY . .
@@ -29,4 +29,4 @@ COPY . .
 EXPOSE 8501
 
 # Commande pour exécuter l'application
-CMD ["sh", "-c", "python /app/scripts/wait_for_db.py && streamlit run app/main.py --server.port=8501 --server.address=0.0.0.0"]
+CMD ["sh", "-c", "python app/scripts/wait_for_db.py && streamlit run app/main.py --server.port=8501 --server.address=0.0.0.0"]

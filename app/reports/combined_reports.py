@@ -5,6 +5,7 @@ from .jira_reports import JiraReports
 from .tempo_reports import TempoReport
 
 class JiraTempoReport:
+    # called
     def __init__(self):
         self.jira_report = JiraReports()
         self.tempo_report = TempoReport()

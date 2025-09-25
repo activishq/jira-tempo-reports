@@ -1,24 +1,24 @@
 import requests
 from requests.auth import HTTPBasicAuth
-from decouple import config
 import pandas as pd
 from typing import List
-from dotenv import load_dotenv
 import os
+from constants import (
+    JIRA_USERNAME,
+    JIRA_API_KEY,
+)
+
 
 env = os.getenv('ENVIRONMENT')
 if env not in ['test', 'development', 'production']:
     raise ValueError("ENVIRONMENT must be one of 'test', 'development', 'production'")
 
-dot_env_path = f'config/.env.{env}'
-load_dotenv(dotenv_path=dot_env_path)
-
-print(dot_env_path)
 
 JIRA_URL = "https://activis.atlassian.net"
 class JiraReports:
+    # called by main
     def __init__(self):
-        self.auth = HTTPBasicAuth(config('JIRA_USERNAME'), config('JIRA_API_KEY'))
+        self.auth = HTTPBasicAuth(JIRA_USERNAME, JIRA_API_KEY)
 
     def get_current_users(self) -> List[str]:
         """Return a list of current users."""

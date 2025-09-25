@@ -1,16 +1,16 @@
 import requests
-from decouple import config
+from constants import TEMPO_ACCESS_TOKEN
 import pandas as pd
-from typing import List, Dict, Optional
+from typing import List, Dict
 import logging
-import json
 from .jira_reports import JiraReports
 
 logger = logging.getLogger(__name__)
 class TempoReport:
+    # used by main
     def __init__(self):
         self.base_url = "https://api.tempo.io/4/worklogs"
-        self.access_token = config('TEMPO_ACCESS_TOKEN')
+        self.access_token = TEMPO_ACCESS_TOKEN
         self.session = requests.Session()
         self.session.headers.update({
             "Authorization": f"Bearer {self.access_token}"

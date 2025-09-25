@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 from scripts.db_operations import get_db_connection, get_availability, get_employees, get_target

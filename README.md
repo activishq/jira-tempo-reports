@@ -127,3 +127,6 @@ Lien du projet : [https://github.com/votre-nom/jira-tempo-report](https://github
 
 ## Deployment
 
+docker compose up -d --build app
+
+<!-- update .env.production fron config directory -->

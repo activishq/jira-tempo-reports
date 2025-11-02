@@ -15,7 +15,6 @@ if env not in ['test', 'development', 'production']:
     raise ValueError("ENVIRONMENT must be one of 'test', 'development', 'production'")
 
 
-
 class JiraReports:
     # called by main
     def get_current_users(self) -> List[str]:

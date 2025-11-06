@@ -29,4 +29,4 @@ COPY . .
 EXPOSE 8501
 
 # Commande pour exécuter l'application
-CMD ["sh", "-c", "python app/scripts/wait_for_db.py && streamlit run app/main.py --server.port=8501 --server.address=0.0.0.0"]
+CMD ["sh", "-c", "streamlit run app/main.py --server.port=8501 --server.address=0.0.0.0"]

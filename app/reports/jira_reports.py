@@ -1,4 +1,5 @@
 import requests
+import json
 from requests.auth import HTTPBasicAuth
 import pandas as pd
 from typing import List
@@ -7,7 +8,7 @@ from constants import (
     JIRA_USERNAME,
     JIRA_API_KEY,
 )
-from .helpers import JiraApi
+from .helpers import JiraApi, JsonFileBackup
 
 
 env = os.getenv('ENVIRONMENT')
@@ -16,13 +17,6 @@ if env not in ['test', 'development', 'production']:
 
 
 class JiraReports:
-    # called by main
-    def get_current_users(self) -> List[str]:
-        """Return a list of current users."""
-        return ['Sonia Marquette', 'Claire Conrardy', 'Benoit Leboucher',
-                'Eric Ferole', 'Laurence Cauchon', 'Julien Le Mée',
-                'David Chabot', 'Thierry Tanguay', 'Jeff Trempe', 'David Cazal']
-
     def get_department_availability(self) -> float:
         """Calculate and return the total department availability."""
         user_availabilities = {
@@ -40,10 +34,8 @@ class JiraReports:
         """
         Retrieve estimated time data from Jira for a specific user and date range.
         """
-        jql = f"assignee in (\"{user_name}\") AND worklogDate >= '{start_date}' AND worklogDate <= '{end_date}'"
-
         params = {
-            'jql': jql,
+            'jql': f"assignee in (\"{user_name}\") AND worklogDate >= '{start_date}' AND worklogDate <= '{end_date}'",
             'fields': 'timeoriginalestimate,summary,timespent'
         }
 
@@ -68,36 +60,17 @@ class JiraReports:
             print(f"Error fetching data from Jira: {e}")
             return pd.DataFrame()
 
-    # def get_department_total_time_spent(self, start_date: str, end_date: str) -> float:
-    #     """
-    #     Calculate the total time spent by the department for a given date range.
-    #     """
-    #     department_users = self.get_current_users()
-    #     department_estimates = pd.DataFrame()
-
-    #     for user_name in department_users:
-    #         user_estimated_time = self.get_estimated_time(start_date, end_date, user_name)
-    #         department_estimates = pd.concat([department_estimates, user_estimated_time], ignore_index=True)
-
-    #     return department_estimates['timespent'].sum()
-
-    # def get_department_estimated_time(self, start_date: str, end_date: str) -> float:
-    #     """
-    #     Calculate the total estimated time for the department for a given date range.
-    #     """
-    #     department_users = self.get_current_users()
-    #     department_estimates = pd.DataFrame()
-
-    #     for user_name in department_users:
-    #         user_estimated_time = self.get_estimated_time(start_date, end_date, user_name)
-    #         department_estimates = pd.concat([department_estimates, user_estimated_time], ignore_index=True)
-
-    #     return department_estimates['estimated_time'].sum()
-
     def get_user_account_id(self, display_name: str) -> str:
         """
         Récupère l'accountId d'un utilisateur à partir de son nom d'affichage.
         """
+        backup = JsonFileBackup(file_name='user_account_id')
+        previous_data = backup.read()
+        user_account_id = previous_data.get(display_name, None)
+
+        if user_account_id:
+            return user_account_id
+        
         params = {
             'query': display_name
         }
@@ -106,12 +79,11 @@ class JiraReports:
             response.raise_for_status()
             users = response.json()
 
-            # Chercher une correspondance exacte
             for user in users:
-                if user.get('displayName') == display_name:
-                    return user.get('accountId')
+                previous_data[user.get('displayName')] = user.get('accountId')
+            backup.dump(previous_data)
 
-            return None
+            return previous_data.get(display_name, None)
         except requests.RequestException as e:
             print(f"Erreur lors de la récupération de l'accountId: {e}")
             return None

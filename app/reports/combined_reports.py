@@ -3,7 +3,6 @@ from typing import List
 from datetime import datetime, timedelta
 from .jira_reports import JiraReports
 from .tempo_reports import TempoReport
-from .helpers import Employees
 
 class JiraTempoReport:
     # called
@@ -50,7 +49,7 @@ class JiraTempoReport:
 
     def get_logged_time(self, start_date: str, end_date: str, user_name: str) -> float:
         """Get total logged time for a user in the specified date range."""
-        user_account_id = Employees.get_user_account_id(user_name)
+        user_account_id = self.jira_report.get_user_account_id(user_name)
 
         if not user_account_id:
             print(f"Warning: No account ID found for user {user_name}")
@@ -93,33 +92,3 @@ class JiraTempoReport:
 
         return billable_ratio
 
-    # def get_department_leaked_time(self, start_date: str, end_date: str) -> float:
-    #     """Calculate total leaked time for the department in the specified date range."""
-    #     department_users = self.jira_report.get_current_users()
-    #     department_leaked_time = sum(self.get_leaked_time(start_date, end_date, user_name) for user_name in department_users)
-
-    #     return department_leaked_time
-
-    # def calculate_weekly_billable_hours(self, start_date: str, end_date: str) -> pd.DataFrame:
-    #     start = datetime.strptime(start_date, "%Y-%m-%d")
-    #     end = datetime.strptime(end_date, "%Y-%m-%d")
-
-    #     current_users = self.jira_report.get_current_users()
-    #     weekly_data = []
-
-    #     while start <= end:
-    #         week_end = start + timedelta(days=6)
-    #         week_end = min(week_end, end)
-
-    #         for user in current_users:
-    #             billable_time = self.get_billable_time(start.strftime("%Y-%m-%d"), week_end.strftime("%Y-%m-%d"), user)
-
-    #             weekly_data.append({
-    #                 'user': user,
-    #                 'week_start': start,
-    #                 'billable_hours': billable_time
-    #             })
-
-    #         start = week_end + timedelta(days=1)
-
-    #     return pd.DataFrame(weekly_data)

@@ -1,7 +1,7 @@
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv, set_key
 
-load_dotenv(dotenv_path='../.env')  # Utilise .env.production
+load_dotenv()  # Utilise .env.production
 
 # Récupérer les informations de connexion
 DB_HOST = "db"  # Utilise "db" pour la connexion depuis le conteneur app vers le conteneur db
@@ -15,8 +15,19 @@ DB_SSLROOTCERT = os.getenv("DB_SSLMODE")
 JIRA_USERNAME = os.getenv("JIRA_USERNAME")
 JIRA_API_KEY = os.getenv("JIRA_API_KEY")
 
-TEMPO_ACCESS_TOKEN = os.getenv("TEMPO_ACCESS_TOKEN")
 
 TEMPO_CLIENT_ID = os.getenv("TEMPO_CLIENT_ID")
 TEMPO_SECRET_ID = os.getenv("TEMPO_SECRET_ID")
 TEMPO_REDIRECT_URI = os.getenv("TEMPO_REDIRECT_URI")
+TEMPO_ACCESS_TOKEN = os.getenv("TEMPO_ACCESS_TOKEN")
+TEMPO_REFRESH_TOKEN = os.getenv("TEMPO_REFRESH_TOKEN")
+
+
+class EnvUpdater:
+    @staticmethod
+    def update_tokens(access_token: str, refresh_token: str):
+        TEMPO_ACCESS_TOKEN = access_token
+        TEMPO_REFRESH_TOKEN = refresh_token
+        dotenv_file = find_dotenv()
+        set_key(dotenv_file, "TEMPO_ACCESS_TOKEN", access_token)
+        set_key(dotenv_file, "TEMPO_REFRESH_TOKEN", refresh_token)

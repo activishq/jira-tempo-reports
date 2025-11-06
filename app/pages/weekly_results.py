@@ -5,7 +5,7 @@ from reports.combined_reports import JiraTempoReport
 import logging
 import sys
 
-# Configuration du logging
+
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -29,50 +29,21 @@ def weekly_results_page():
     st.title("Résultats de la Semaine Précédente")
 
     try:
-        # Test direct de TempoReport
-        # logger.debug("Test direct de TempoReport")
-        # from reports.tempo_reports import TempoReport
-        # tempo = TempoReport()
         default_start, default_end = get_previous_week_dates()
-        # test_worklogs = tempo.get_worklogs(
-        #     default_start.strftime("%Y-%m-%d"),
-        #     default_end.strftime("%Y-%m-%d")
-        # )
-        # logger.debug(f"Test TempoReport - Nombre de worklogs: {len(test_worklogs)}")
-
-        # DEBUG: Vérifier l'initialisation des employés
-        # logger.debug("Récupération de la liste des employés...")
+        
         employees = get_employees()
-        # logger.debug(f"Employés trouvés: {employees}")
 
         selected_employee = st.selectbox("Sélectionnez un employé", employees)
-        # logger.debug(f"Employé sélectionné: {selected_employee}")
 
         # Sélection de la période
         start_date = st.date_input("Date de début", value=default_start)
         end_date = st.date_input("Date de fin", value=default_end)
-        # logger.debug(f"Dates sélectionnées - Début: {start_date}, Fin: {end_date}")
 
         if start_date > end_date:
             st.error("La date de fin doit être postérieure à la date de début.")
             return
 
-        # DEBUG: Test des appels individuels
-        # logger.debug("Test des appels individuels à Tempo")
-        # test_logs = tempo.get_logged_time(
-        #     start_date.strftime("%Y-%m-%d"),
-        #     end_date.strftime("%Y-%m-%d"),
-        #     selected_employee
-        # )
-        # logger.debug(f"Résultat get_logged_time: {test_logs}")
-
-        # DEBUG: Initialisation du rapport combiné
-        # logger.debug("Initialisation de JiraTempoReport...")
         jira_tempo_report = JiraTempoReport()
-        # logger.debug("JiraTempoReport initialisé avec succès")
-
-        # DEBUG: Calcul des indicateurs
-        # logger.debug(f"Calcul des indicateurs pour {selected_employee}")
 
         try:
             logged_time = jira_tempo_report.get_logged_time(
@@ -80,7 +51,6 @@ def weekly_results_page():
                 end_date.strftime("%Y-%m-%d"),
                 selected_employee
             )
-            # logger.debug(f"Temps enregistré: {logged_time}")
         except Exception as e:
             logger.error(f"Erreur dans get_logged_time: {str(e)}")
             raise
@@ -91,7 +61,6 @@ def weekly_results_page():
                 end_date.strftime("%Y-%m-%d"),
                 selected_employee
             )
-            # logger.debug(f"Temps facturable: {billable_time}")
         except Exception as e:
             logger.error(f"Erreur dans get_billable_time: {str(e)}")
             raise

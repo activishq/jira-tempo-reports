@@ -5,6 +5,7 @@ from typing import List, Dict
 import logging
 from .jira_reports import JiraReports
 
+
 logger = logging.getLogger(__name__)
 class TempoReport:
     # used by main

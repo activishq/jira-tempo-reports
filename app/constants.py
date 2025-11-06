@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv, find_dotenv, set_key
 
-load_dotenv()  # Utilise .env.production
+load_dotenv(override=True)  # Utilise .env.production
 
 # Récupérer les informations de connexion
 DB_HOST = "db"  # Utilise "db" pour la connexion depuis le conteneur app vers le conteneur db
@@ -31,3 +31,4 @@ class EnvUpdater:
         dotenv_file = find_dotenv()
         set_key(dotenv_file, "TEMPO_ACCESS_TOKEN", access_token)
         set_key(dotenv_file, "TEMPO_REFRESH_TOKEN", refresh_token)
+        load_dotenv(override=True)

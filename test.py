@@ -6,5 +6,9 @@ from reports.helpers import TokenManager
 
 
 token_manager = TokenManager()
-tokens = token_manager.get_access_token()
-print(tokens)
+TokenManager()
+TokenManager()
+TokenManager()
+
+# tokens = token_manager.refresh_access_token()
+# print(tokens)

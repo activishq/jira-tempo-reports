@@ -63,13 +63,20 @@ class JsonFileBackup:
 
 
 class TokenManager:
+    __instance = None
     redirect_uri = 'https://www.google.com/callback/'
-    token_url = "https://api.tempo.io/oauth/token/"
+    token_url = 'https://api.tempo.io/oauth/token/'
+    
+    def __new__(cls):
+        if cls.__instance is None:
+            cls.__instance = super(TokenManager, cls).__new__(cls)
+            cls.__instance.client_id = TEMPO_CLIENT_ID
+            cls.__instance.secret_id = TEMPO_SECRET_ID
+            cls.__instance.access_token = TEMPO_ACCESS_TOKEN
+            cls.__instance.refresh_token = TEMPO_REFRESH_TOKEN
 
-    def __init__(self):
-        self.client_id = TEMPO_CLIENT_ID
-        self.secret_id = TEMPO_SECRET_ID
-        self.refresh_token = TEMPO_REFRESH_TOKEN
+        return cls.__instance
+    
 
     def __get_authorization_code(self):
         """Prompt user to authorize the app and get the authorization code."""
@@ -94,6 +101,9 @@ class TokenManager:
         response = requests.post(self.token_url, data=data)
         data = response.json()
 
+        self.access_token = data['access_token']
+        self.refresh_token = data['refresh_token']
+
         EnvUpdater.update_tokens(data['access_token'], data['refresh_token'])
         
         return data
@@ -110,9 +120,9 @@ class TokenManager:
         response = requests.post(self.token_url, data=data)
         data = response.json()
 
-        EnvUpdater.update_tokens(
-            access_token=data['access_token'],
-            refresh_token=data['refresh_token'],
-        )
+        self.refresh_token = data['refresh_token']
+        self.access_token = data['access_token']
+
+        EnvUpdater.update_tokens(data['access_token'], data['refresh_token'])
         
         return data

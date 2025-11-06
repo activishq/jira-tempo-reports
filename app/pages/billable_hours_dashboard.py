@@ -37,8 +37,9 @@ def main():
     employees = get_employees()
     selected_employee = st.selectbox("Sélectionnez un employé", employees)
 
-    default_start_date = datetime(2024, 7, 29)
-    default_end_date = datetime.now()
+    now = datetime.now().date()
+    default_start_date = now - timedelta(weeks=26)
+    default_end_date = now
 
     col1, col2 = st.columns(2)
     with col1:

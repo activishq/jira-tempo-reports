@@ -18,7 +18,10 @@ logger = logging.getLogger(__name__)
 
 def get_previous_week_dates():
     today = datetime.now().date()
-    start_of_week = today - timedelta(days=today.weekday() + 7)
+    days_to_subtract = today.weekday()
+    this_monday = today - timedelta(days=days_to_subtract + 1)
+
+    start_of_week = this_monday
     end_of_week = start_of_week + timedelta(days=6)
     return start_of_week, end_of_week
 

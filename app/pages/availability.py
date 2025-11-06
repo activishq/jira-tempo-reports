@@ -12,11 +12,9 @@ def availability_management():
 
     # use now instead to have a moving target
     now = datetime.now().date()
+    start_date = now - timedelta(weeks=13)
+    end_date = now + timedelta(weeks=13)
 
-    # Définition de la date de début (30 septembre 2024)
-    start_date = datetime(2024, 10, 28).date()
-    # Fin du trimestre (13 semaines après la date de début)
-    end_date = start_date + timedelta(weeks=13)
 
     st.write(f"Période du budget : du {start_date} au {end_date}")
 
@@ -26,7 +24,7 @@ def availability_management():
         existing_target = get_target(selected_employee, start_date, end_date)
 
         # Création d'un DataFrame pour les entrées
-        weeks = pd.date_range(start=start_date, end=end_date, freq='W-MON')
+        weeks = pd.date_range(start=start_date, end=end_date, freq='W-SUN')
         budget_data = pd.DataFrame({'Week': weeks, 'Disponibilité': [0.0] * len(weeks), 'Target': [0.0] * len(weeks)})
 
         # Convertir la colonne 'Week' en date

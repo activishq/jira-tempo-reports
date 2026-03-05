@@ -16,6 +16,53 @@ class TempoReport:
         self._worklog_cache = {}
         self._issue_key_cache = {}
 
+    def fetch_accounts(self):                                                                                        
+        """Fetch all Tempo accounts."""                                                                              
+        url = "https://api.tempo.io/4/accounts"                                                                      
+        all_accounts = []                                                                                            
+        page_index = 0
+        page_size = 50
+
+        while True:
+            params = {'limit': page_size, 'offset': page_index * page_size}
+            response = requests.get(
+                url,
+                headers={"Authorization": f"Bearer {TokenManager().access_token}"},
+                params=params,
+            )
+            if response.status_code == 401:
+                TokenManager().refresh_access_token()
+                response = requests.get(
+                    url,
+                    headers={"Authorization": f"Bearer {TokenManager().access_token}"},
+                    params=params,
+                )
+            response.raise_for_status()
+            data = response.json()
+            accounts = data.get('results', [])
+            if not accounts:
+                break
+            all_accounts.extend(accounts)
+            if not data.get('metadata', {}).get('next'):
+                break
+            page_index += 1
+
+        return all_accounts
+
+    def fetch_worklogs_by_account(self, account_key, start_date, end_date):
+        """Fetch worklogs filtered by Tempo Account key."""
+        all_worklogs = self._get_cached_worklogs(start_date, end_date)
+
+        account_worklogs = []
+        for log in all_worklogs:
+            values = log.get('attributes', {}).get('values', [])
+            for attr in values:
+                if attr.get('key') == '_TempoAccount_' and attr.get('value') == account_key:
+                    account_worklogs.append(log)
+                    break
+
+        return account_worklogs
+
     def _get_cached_worklogs(self, start_date: str, end_date: str) -> List[Dict]:
         cache_key = f"{start_date}_{end_date}"
         if cache_key not in self._worklog_cache:

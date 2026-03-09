@@ -16,26 +16,35 @@ class TempoReport:
         self._worklog_cache = {}
         self._issue_key_cache = {}
 
-    def fetch_accounts(self):                                                                                        
-        """Fetch all Tempo accounts."""                                                                              
-        url = "https://api.tempo.io/4/accounts"                                                                      
-        all_accounts = []                                                                                            
+    def fetch_accounts(self):
+        """Fetch all Tempo accounts (OPEN, CLOSED, and ARCHIVED)."""
+        url = "https://api.tempo.io/4/accounts/search"
+        all_accounts = []
         page_index = 0
         page_size = 50
+        body = {"statuses": ["OPEN", "CLOSED", "ARCHIVED"]}
 
         while True:
             params = {'limit': page_size, 'offset': page_index * page_size}
-            response = requests.get(
+            response = requests.post(
                 url,
-                headers={"Authorization": f"Bearer {TokenManager().access_token}"},
+                headers={
+                    "Authorization": f"Bearer {TokenManager().access_token}",
+                    "Content-Type": "application/json",
+                },
                 params=params,
+                json=body,
             )
             if response.status_code == 401:
                 TokenManager().refresh_access_token()
-                response = requests.get(
+                response = requests.post(
                     url,
-                    headers={"Authorization": f"Bearer {TokenManager().access_token}"},
+                    headers={
+                        "Authorization": f"Bearer {TokenManager().access_token}",
+                        "Content-Type": "application/json",
+                    },
                     params=params,
+                    json=body,
                 )
             response.raise_for_status()
             data = response.json()

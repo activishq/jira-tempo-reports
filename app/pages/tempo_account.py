@@ -31,13 +31,18 @@ def tempo_account_page():
     try:
         tempo = TempoReport()
         accounts = tempo.fetch_accounts()
-        account_map = {a['name']: a['key'] for a in accounts}
+        account_options = sorted(
+            [f"{a['key']} ({a.get('status', 'OPEN')})" for a in accounts]
+        )
+        account_key_map = {
+            f"{a['key']} ({a.get('status', 'OPEN')})": a['key'] for a in accounts
+        }
 
-        if not account_map:
+        if not account_options:
             st.warning("Aucun compte Tempo trouvé.")
             return
 
-        selected_name = st.selectbox("Sélectionnez un compte Tempo", sorted(account_map.keys()))
+        selected_option = st.selectbox("Sélectionnez un compte Tempo", account_options)
 
         default_start, default_end = get_default_dates()
         start_date = st.date_input("Date de début", value=default_start)
@@ -47,7 +52,7 @@ def tempo_account_page():
             st.error("La date de fin doit être postérieure à la date de début.")
             return
 
-        account_key = account_map[selected_name]
+        account_key = account_key_map[selected_option]
         worklogs = tempo.fetch_worklogs_by_account(
             account_key,
             start_date.strftime("%Y-%m-%d"),

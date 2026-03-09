@@ -59,18 +59,42 @@ class TempoReport:
         return all_accounts
 
     def fetch_worklogs_by_account(self, account_key, start_date, end_date):
-        """Fetch worklogs filtered by Tempo Account key."""
-        all_worklogs = self._get_cached_worklogs(start_date, end_date)
+        """Fetch worklogs for a specific Tempo Account using the dedicated endpoint."""
+        url = f"https://api.tempo.io/4/worklogs/account/{account_key}"
+        all_worklogs = []
+        page_index = 0
+        page_size = 50
 
-        account_worklogs = []
-        for log in all_worklogs:
-            values = log.get('attributes', {}).get('values', [])
-            for attr in values:
-                if attr.get('key') == '_TempoAccount_' and attr.get('value') == account_key:
-                    account_worklogs.append(log)
-                    break
+        while True:
+            params = {
+                'from': start_date,
+                'to': end_date,
+                'limit': page_size,
+                'offset': page_index * page_size,
+            }
+            response = requests.get(
+                url,
+                headers={"Authorization": f"Bearer {TokenManager().access_token}"},
+                params=params,
+            )
+            if response.status_code == 401:
+                TokenManager().refresh_access_token()
+                response = requests.get(
+                    url,
+                    headers={"Authorization": f"Bearer {TokenManager().access_token}"},
+                    params=params,
+                )
+            response.raise_for_status()
+            data = response.json()
+            worklogs = data.get('results', [])
+            if not worklogs:
+                break
+            all_worklogs.extend(worklogs)
+            if not data.get('metadata', {}).get('next'):
+                break
+            page_index += 1
 
-        return account_worklogs
+        return all_worklogs
 
     def _get_cached_worklogs(self, start_date: str, end_date: str) -> List[Dict]:
         cache_key = f"{start_date}_{end_date}"

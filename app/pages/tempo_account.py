@@ -60,7 +60,15 @@ def tempo_account_page():
         )
 
         if not worklogs:
-            st.warning("Aucune donnée trouvée pour la période sélectionnée.")
+            all_worklogs = tempo.fetch_worklogs_by_account(account_key, "2015-01-01", "2099-12-31")
+            if all_worklogs:
+                dates = [w['startDate'] for w in all_worklogs]
+                st.warning(
+                    f"Aucune donnée trouvée pour la période sélectionnée. "
+                    f"Ce compte a des worklogs entre le **{min(dates)}** et le **{max(dates)}**."
+                )
+            else:
+                st.warning("Aucune donnée trouvée pour ce compte.")
             return
 
         # Calcul des métriques

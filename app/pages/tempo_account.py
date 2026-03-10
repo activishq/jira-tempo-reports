@@ -24,7 +24,7 @@ def get_default_dates():
     return start, end
 
 def format_hours(hours):                                                                                       
-      return f"{hours:.1f}h"
+      return f"{hours:.2f}h"
 
 def tempo_account_page():
     st.title("Rapport par Compte Tempo")
@@ -140,7 +140,7 @@ def tempo_account_page():
         col1.metric("Heures enregistrées", format_hours(total_logged))
         col2.metric("Heures facturables", format_hours(total_billable))
         col3.metric("Heures non-facturables", format_hours(total_non_billable))
-        col4.metric("Ratio de facturation", f"{billable_ratio:.1f}%")
+        col4.metric("Ratio de facturation", f"{billable_ratio:.2f}%")
 
         df = pd.DataFrame([
             {
@@ -165,12 +165,12 @@ def tempo_account_page():
                 df,
                 column_config={
                     "Issue Key": "Issue",
-                    "Temps enregistré": st.column_config.NumberColumn(format="%.1f h"),
-                    "Temps estimé": st.column_config.NumberColumn(format="%.1f h"),
-                    "Temps total passé": st.column_config.NumberColumn(format="%.1f h"),
-                    "Temps fuite": st.column_config.NumberColumn(format="%.1f h"),
-                    "Temps facturable": st.column_config.NumberColumn(format="%.1f h"),
-                    "Temps non-facturable": st.column_config.NumberColumn(format="%.1f h"),
+                    "Temps enregistré": st.column_config.NumberColumn(format="%.2f h"),
+                    "Temps estimé": st.column_config.NumberColumn(format="%.2f h"),
+                    "Temps total passé": st.column_config.NumberColumn(format="%.2f h"),
+                    "Temps fuite": st.column_config.NumberColumn(format="%.2f h"),
+                    "Temps facturable": st.column_config.NumberColumn(format="%.2f h"),
+                    "Temps non-facturable": st.column_config.NumberColumn(format="%.2f h"),
                     "URL": st.column_config.LinkColumn("Lien Jira")
                 },
                 hide_index=True,

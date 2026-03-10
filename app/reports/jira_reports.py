@@ -100,3 +100,15 @@ class JiraReports:
         except requests.RequestException as e:
             print(f"Erreur lors de la récupération de la clé du ticket: {e}")
             return None
+
+    def _get_issue_fields(self, issue_key: str) -> dict:
+        """
+        Récupère les champs d'un ticket à partir de sa clé.
+        """
+        try:
+            response = JiraApi.get_issue(issue_key)
+            response.raise_for_status()
+            return response.json().get('fields', {})
+        except requests.RequestException as e:
+            print(f"Erreur lors de la récupération des champs du ticket {issue_key}: {e}")
+            return None

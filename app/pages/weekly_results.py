@@ -26,7 +26,7 @@ def get_previous_week_dates():
     return start_of_week, end_of_week
 
 def format_hours(hours):
-    return f"{hours:.1f}"
+    return f"{hours:.2f}"
 
 def weekly_results_page():
     st.title("Résultats de la Semaine Précédente")
@@ -83,7 +83,7 @@ def weekly_results_page():
         col1.metric("Heures enregistrées", format_hours(logged_time))
         col2.metric("Heures facturables", format_hours(billable_time))
         col3.metric("Heures non-facturables", format_hours(non_billable_time))
-        col4.metric("Ratio de facturation", f"{billable_ratio:.1f}%")
+        col4.metric("Ratio de facturation", f"{billable_ratio:.2f}%")
 
         # DEBUG: Récupération des données Jira
         # logger.debug("Récupération des données Jira...")
@@ -100,9 +100,12 @@ def weekly_results_page():
             st.warning("Aucune donnée trouvée pour la période sélectionnée.")
             return
 
+        # Calcul du temps facturable par issue
+        df_jira["Period's Billable Time"] = df_jira["Period's Logged Time"] - df_jira["Period's Leaked Time"]
+
         # Sélection et renommage des colonnes pertinentes
         df_display = df_jira[['Issue Key', 'Estimated Time', 'Total Time Spent',
-                             "Period's Logged Time", 'Total Leaked Time', "Period's Leaked Time"]]
+                             "Period's Logged Time", "Period's Billable Time", 'Total Leaked Time', "Period's Leaked Time"]]
 
         # Tri du DataFrame
         df_display = df_display.sort_values(by="Period's Logged Time", ascending=False)
@@ -118,27 +121,32 @@ def weekly_results_page():
                 "Estimated Time": st.column_config.NumberColumn(
                     "Temps estimé",
                     help="Temps estimé pour l'issue",
-                    format="%.1f h"
+                    format="%.2f h"
                 ),
                 "Total Time Spent": st.column_config.NumberColumn(
                     "Temps total passé",
                     help="Temps total passé sur l'issue",
-                    format="%.1f h"
+                    format="%.2f h"
                 ),
                 "Period's Logged Time": st.column_config.NumberColumn(
                     "Temps enregistré (période)",
                     help="Temps enregistré pour la période sélectionnée",
-                    format="%.1f h"
+                    format="%.2f h"
+                ),
+                "Period's Billable Time": st.column_config.NumberColumn(
+                    "Temps facturable (période)",
+                    help="Temps facturable pour la période sélectionnée",
+                    format="%.2f h"
                 ),
                 "Total Leaked Time": st.column_config.NumberColumn(
                     "Temps de fuite total",
                     help="Temps de fuite total pour l'issue",
-                    format="%.1f h"
+                    format="%.2f h"
                 ),
                 "Period's Leaked Time": st.column_config.NumberColumn(
                     "Temps de fuite (période)",
                     help="Temps de fuite pour la période sélectionnée",
-                    format="%.1f h"
+                    format="%.2f h"
                 ),
                 "URL": st.column_config.LinkColumn("Lien Jira")
             },

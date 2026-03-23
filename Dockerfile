@@ -25,8 +25,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copier le reste du code de l'application dans le conteneur
 COPY . .
 
-# Exposer le port sur lequel Streamlit s'exécute
+# Exposer les ports Streamlit et API
 EXPOSE 8501
+EXPOSE 8001
 
-# Commande pour exécuter l'application
-CMD ["sh", "-c", "streamlit run app/main.py --server.port=8501 --server.address=0.0.0.0"]
+# Lancer Streamlit et l'API ensemble
+CMD ["sh", "-c", "uvicorn app.api:app --host 0.0.0.0 --port 8001 & streamlit run app/main.py --server.port=8501 --server.address=0.0.0.0"]

@@ -98,25 +98,37 @@ def tempo_account_page():
                     time_by_issue[issue_key] = {'logged': 0}
                 time_by_issue[issue_key]['logged'] += log['timeSpentSeconds'] / 3600
 
-        # Récupérer estimation et temps total passé depuis Jira pour chaque issue
+        # Récupérer les worklogs avant la période pour calculer le timespent_avant par issue
+        day_before = (start_date - timedelta(days=1)).strftime("%Y-%m-%d")
+        historical_worklogs = tempo.fetch_worklogs_by_account(account_key, "2015-01-01", day_before)
+        timespent_before = {}
+        for log in historical_worklogs:
+            issue_id = str(log['issue']['id'])
+            if issue_id not in tempo._issue_key_cache:
+                tempo._issue_key_cache[issue_id] = jira.get_issue_key_from_id(issue_id)
+            issue_key = tempo._issue_key_cache[issue_id]
+            if issue_key:
+                timespent_before[issue_key] = timespent_before.get(issue_key, 0) + log['timeSpentSeconds'] / 3600
+
+        # Récupérer estimation depuis Jira et calculer le leaked précis par période
         for issue_key in time_by_issue:
             try:
                 response = jira._get_issue_fields(issue_key)
                 if response:
                     estimated = (response.get('timeoriginalestimate') or 0) / 3600
-                    timespent = (response.get('timespent') or 0) / 3600
                 else:
                     estimated = 0
-                    timespent = 0
             except Exception:
                 estimated = 0
-                timespent = 0
+            logged = time_by_issue[issue_key]['logged']
+            before = timespent_before.get(issue_key, 0)
+            leaked_avant = max(0, before - estimated)
+            leaked_fin = max(0, before + logged - estimated)
+            leaked = leaked_fin - leaked_avant
             time_by_issue[issue_key]['estimated'] = estimated
-            time_by_issue[issue_key]['timespent'] = timespent
-            # Leaked = temps dépassé sur l'estimation, plafonné au logged de la période
-            leaked = min(max(timespent - estimated, 0), time_by_issue[issue_key]['logged'])
+            time_by_issue[issue_key]['timespent'] = round(before + logged, 2)
             time_by_issue[issue_key]['leaked'] = leaked
-            time_by_issue[issue_key]['billable'] = time_by_issue[issue_key]['logged'] - leaked
+            time_by_issue[issue_key]['billable'] = logged - leaked
 
         # Logs de debug
         for issue_key, v in list(time_by_issue.items())[:3]:

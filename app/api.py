@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Query, HTTPException
-from fastapi.responses import JSONResponse
 from app.reports.tempo_reports import TempoReport
 from app.reports.jira_reports import JiraReports
 from datetime import datetime, timedelta

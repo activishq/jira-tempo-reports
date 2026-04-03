@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Query, HTTPException
-from app.reports.tempo_reports import TempoReport
-from app.reports.jira_reports import JiraReports
+from reports.tempo_reports import TempoReport
+from reports.jira_reports import JiraReports
 from datetime import datetime, timedelta
 
 app = FastAPI(title="Jira Tempo Reports API")

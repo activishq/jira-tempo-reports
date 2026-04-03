@@ -4,7 +4,7 @@ FROM python:3.10-slim
 # Définir le répertoire de travail dans le conteneur
 WORKDIR /app
 
-ENV PYTHONPATH="${PYTHONPATH}:/app"
+ENV PYTHONPATH="${PYTHONPATH}:/app:/app/app"
 
 # Installer les dépendances système nécessaires, y compris PostgreSQL client
 RUN apt-get update && apt-get install -y \

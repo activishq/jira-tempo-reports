@@ -2,11 +2,11 @@ import os
 from dotenv import load_dotenv
 import psycopg2
 
-# Charger les variables d'environnement
+# Charger les variables d'environnement (si non déjà fournies par env_file Docker)
 load_dotenv(dotenv_path='../config/.env.production')
 
-# Récupérer les informations de connexion
-DB_HOST = "db"  # Connexion depuis le conteneur app vers le conteneur db
+# Récupérer les informations de connexion depuis l'environnement
+DB_HOST = os.getenv("DB_HOST")
 DB_NAME = os.getenv("DB_NAME")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")

@@ -35,12 +35,20 @@ def update_employees():
             found = [row[0] for row in cur.fetchall()]
             print(f"Employés à supprimer trouvés en DB: {found}")
 
-            # 2. Suppression
+            # 2a. Supprimer les données liées dans les tables sans CASCADE
+            for table in ("target", "availability", "employee_weekly_hours"):
+                cur.execute(
+                    f"DELETE FROM {table} WHERE employee_id = ANY(%s)",
+                    (EMPLOYEES_TO_REMOVE,),
+                )
+                print(f"Lignes supprimées dans {table}: {cur.rowcount}")
+
+            # 2b. Suppression des employés
             cur.execute(
                 "DELETE FROM employees WHERE employee_id = ANY(%s)",
                 (EMPLOYEES_TO_REMOVE,),
             )
-            print(f"Lignes supprimées: {cur.rowcount}")
+            print(f"Lignes supprimées dans employees: {cur.rowcount}")
 
             # 3. Ajout de Matthieu
             cur.execute(

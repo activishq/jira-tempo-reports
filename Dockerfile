@@ -29,5 +29,5 @@ COPY . .
 EXPOSE 8501
 EXPOSE 8001
 
-# Lancer Streamlit et l'API ensemble
-CMD ["sh", "-c", "uvicorn app.api:app --host 0.0.0.0 --port 8001 & streamlit run app/main.py --server.port=8501 --server.address=0.0.0.0"]
+# Lancer le rafraîchisseur de token Tempo, l'API et Streamlit ensemble
+CMD ["sh", "-c", "python app/scripts/token_refresher.py & uvicorn app.api:app --host 0.0.0.0 --port 8001 & streamlit run app/main.py --server.port=8501 --server.address=0.0.0.0"]

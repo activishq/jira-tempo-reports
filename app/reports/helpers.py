@@ -1,8 +1,10 @@
 import json
+import logging
 import requests
 from requests.auth import HTTPBasicAuth
 import webbrowser
 from urllib.parse import urlencode, urlparse, parse_qs
+from dotenv import find_dotenv, dotenv_values
 from constants import (
     JIRA_USERNAME,
     JIRA_API_KEY,
@@ -12,6 +14,17 @@ from constants import (
     TEMPO_REFRESH_TOKEN,
     EnvUpdater,
 )
+
+logger = logging.getLogger(__name__)
+
+
+class TempoTokenRefreshError(Exception):
+    """Raised when the Tempo OAuth token could not be refreshed.
+
+    This typically means both the access token and the refresh token have
+    expired (Tempo tokens live ~30 days), and a full manual OAuth
+    authorization is required to obtain a new pair of tokens.
+    """
 
 
 class JiraApi:
@@ -108,8 +121,36 @@ class TokenManager:
         
         return data
 
+    def _reload_from_env(self):
+        """Reload the tokens from the .env file.
+
+        Tempo uses rotating refresh tokens, and several processes (API,
+        Streamlit, the background refresher) share the same .env file. Whenever
+        one process refreshes, the others hold stale in-memory tokens. Reloading
+        from disk lets a process pick up tokens refreshed elsewhere before
+        attempting a refresh of its own (which would fail with a rotated token).
+        """
+        dotenv_path = find_dotenv()
+        if not dotenv_path:
+            return
+        values = dotenv_values(dotenv_path)
+        access_token = values.get("TEMPO_ACCESS_TOKEN")
+        refresh_token = values.get("TEMPO_REFRESH_TOKEN")
+        if access_token:
+            self.access_token = access_token
+        if refresh_token:
+            self.refresh_token = refresh_token
+
     def refresh_access_token(self):
-        """Refresh the access token using the refresh token."""
+        """Refresh the access token using the refresh token.
+
+        Always reads the freshest refresh token from disk first (to cope with
+        token rotation across processes) and validates the response so a failed
+        refresh raises a clear error instead of a cryptic KeyError.
+        """
+        # Use the most recent refresh token available on disk.
+        self._reload_from_env()
+
         data = {
             'grant_type': 'refresh_token',
             'client_id': self.client_id,
@@ -118,11 +159,60 @@ class TokenManager:
             'refresh_token': self.refresh_token
         }
         response = requests.post(self.token_url, data=data)
-        data = response.json()
 
-        self.refresh_token = data['refresh_token']
-        self.access_token = data['access_token']
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = {}
 
-        EnvUpdater.update_tokens(data['access_token'], data['refresh_token'])
-        
-        return data
+        if (
+            response.status_code != 200
+            or "access_token" not in payload
+            or "refresh_token" not in payload
+        ):
+            # Maybe another process already rotated the tokens; re-read disk so
+            # the caller can retry with whatever is currently valid.
+            self._reload_from_env()
+            raise TempoTokenRefreshError(
+                "Tempo token refresh failed "
+                f"(status={response.status_code}): {payload or response.text}"
+            )
+
+        self.access_token = payload['access_token']
+        self.refresh_token = payload['refresh_token']
+
+        EnvUpdater.update_tokens(payload['access_token'], payload['refresh_token'])
+
+        return payload
+
+
+def tempo_request(method, url, *, params=None, json=None, extra_headers=None):
+    """Perform an authenticated request against the Tempo API.
+
+    Handles 401 responses gracefully:
+      1. Reload tokens from .env and retry (another process / the background
+         refresher may have already rotated the tokens).
+      2. If still unauthorized, refresh the token ourselves and retry once.
+
+    Raises TempoTokenRefreshError (via refresh_access_token) when the tokens
+    can no longer be refreshed and a manual re-authorization is required.
+    """
+    token_manager = TokenManager()
+
+    def _send(token):
+        headers = {"Authorization": f"Bearer {token}"}
+        if extra_headers:
+            headers.update(extra_headers)
+        return requests.request(method, url, headers=headers, params=params, json=json)
+
+    response = _send(token_manager.access_token)
+
+    if response.status_code == 401:
+        token_manager._reload_from_env()
+        response = _send(token_manager.access_token)
+
+    if response.status_code == 401:
+        token_manager.refresh_access_token()
+        response = _send(token_manager.access_token)
+
+    return response

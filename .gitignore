@@ -48,6 +48,9 @@ compiled/
 # VS Code
 .vscode/
 
+# Claude Code (local settings & worktrees)
+.claude/
+
 # Local configuration files
 config
 

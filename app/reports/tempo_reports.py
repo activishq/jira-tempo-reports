@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 from typing import List, Dict
 import logging
-from .helpers import TokenManager
+from .helpers import tempo_request
 from .jira_reports import JiraReports
 
 
@@ -26,26 +26,13 @@ class TempoReport:
 
         while True:
             params = {'limit': page_size, 'offset': page_index * page_size}
-            response = requests.post(
+            response = tempo_request(
+                "POST",
                 url,
-                headers={
-                    "Authorization": f"Bearer {TokenManager().access_token}",
-                    "Content-Type": "application/json",
-                },
                 params=params,
                 json=body,
+                extra_headers={"Content-Type": "application/json"},
             )
-            if response.status_code == 401:
-                TokenManager().refresh_access_token()
-                response = requests.post(
-                    url,
-                    headers={
-                        "Authorization": f"Bearer {TokenManager().access_token}",
-                        "Content-Type": "application/json",
-                    },
-                    params=params,
-                    json=body,
-                )
             response.raise_for_status()
             data = response.json()
             accounts = data.get('results', [])
@@ -72,18 +59,7 @@ class TempoReport:
                 'limit': page_size,
                 'offset': page_index * page_size,
             }
-            response = requests.get(
-                url,
-                headers={"Authorization": f"Bearer {TokenManager().access_token}"},
-                params=params,
-            )
-            if response.status_code == 401:
-                TokenManager().refresh_access_token()
-                response = requests.get(
-                    url,
-                    headers={"Authorization": f"Bearer {TokenManager().access_token}"},
-                    params=params,
-                )
+            response = tempo_request("GET", url, params=params)
             response.raise_for_status()
             data = response.json()
             worklogs = data.get('results', [])
@@ -116,20 +92,7 @@ class TempoReport:
                 'offset': page_index * page_size
             }
 
-            response =requests.get(
-                self.base_url, 
-                headers={"Authorization": f"Bearer {TokenManager().access_token}"},
-                params=params,
-            )
-            if response.status_code == 401:
-                TokenManager().refresh_access_token()
-
-                response = requests.get(
-                    self.base_url, 
-                    headers={"Authorization": f"Bearer {TokenManager().access_token}"},
-                    params=params,
-                )
-           
+            response = tempo_request("GET", self.base_url, params=params)
             response.raise_for_status()
             data = response.json()
             worklogs = data.get('results', [])

@@ -141,7 +141,9 @@ class JiraReports:
         while True:
             params = {
                 'jql': jql,
-                'fields': 'timeoriginalestimate,timespent,statuscategorychangeddate,status,summary',
+                # NB : id de champ = statuscategorychangedate (un seul « d »),
+                # alors que la clause JQL s'écrit statusCategoryChangedDate.
+                'fields': 'timeoriginalestimate,timespent,statuscategorychangedate,status,summary',
                 'maxResults': 100,
             }
             if next_token:
@@ -159,7 +161,7 @@ class JiraReports:
                         'issue_key': issue.get('key'),
                         'estimated': (fields.get('timeoriginalestimate') or 0) / 3600,
                         'timespent': (fields.get('timespent') or 0) / 3600,
-                        'closed_date': fields.get('statuscategorychangeddate'),
+                        'closed_date': fields.get('statuscategorychangedate'),
                         'status': status.get('name') if isinstance(status, dict) else None,
                     }
                 )

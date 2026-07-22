@@ -117,18 +117,23 @@ class JiraReports:
         self, account_id: str, start_date: str, end_exclusive: str
     ) -> List[dict]:
         """Récupère les tâches **fermées** (statusCategory = Done) assignées à
-        un employé et résolues dans [start_date, end_exclusive[.
+        un employé et **entrées dans la catégorie « Terminé »** dans
+        [start_date, end_exclusive[.
+
+        Le workflow Jira d'Activis passe les tâches en « Terminé »/« Résolu »
+        sans remplir resolution/resolutiondate. On bucketise donc sur
+        `statusCategoryChangedDate` (date d'entrée en catégorie Done).
 
         Retourne une liste de dicts bruts : {issue_key, estimated (h),
-        timespent (h), resolutiondate (str ISO ou None), resolution (nom ou
-        None)}. La pagination du nouvel endpoint /search/jql (token-based) est
-        suivie jusqu'au bout.
+        timespent (h), closed_date (str ISO ou None), status (nom ou None)}.
+        La pagination du nouvel endpoint /search/jql (token-based) est suivie
+        jusqu'au bout.
         """
         jql = (
             f'assignee = "{account_id}" '
             f'AND statusCategory = Done '
-            f'AND resolutiondate >= "{start_date}" '
-            f'AND resolutiondate < "{end_exclusive}"'
+            f'AND statusCategoryChangedDate >= "{start_date}" '
+            f'AND statusCategoryChangedDate < "{end_exclusive}"'
         )
 
         issues: List[dict] = []
@@ -136,7 +141,7 @@ class JiraReports:
         while True:
             params = {
                 'jql': jql,
-                'fields': 'timeoriginalestimate,timespent,resolutiondate,resolution,summary',
+                'fields': 'timeoriginalestimate,timespent,statuscategorychangeddate,status,summary',
                 'maxResults': 100,
             }
             if next_token:
@@ -148,14 +153,14 @@ class JiraReports:
 
             for issue in data.get('issues', []):
                 fields = issue.get('fields', {}) or {}
-                resolution = fields.get('resolution') or {}
+                status = fields.get('status') or {}
                 issues.append(
                     {
                         'issue_key': issue.get('key'),
                         'estimated': (fields.get('timeoriginalestimate') or 0) / 3600,
                         'timespent': (fields.get('timespent') or 0) / 3600,
-                        'resolutiondate': fields.get('resolutiondate'),
-                        'resolution': resolution.get('name') if isinstance(resolution, dict) else None,
+                        'closed_date': fields.get('statuscategorychangeddate'),
+                        'status': status.get('name') if isinstance(status, dict) else None,
                     }
                 )
 
@@ -179,12 +184,12 @@ class JiraReports:
         for issue in issues[:8]:
             f = issue.get('fields', {}) or {}
             st = (f.get('status') or {})
-            res = (f.get('resolution') or {})
             sample.append({
                 'key': issue.get('key'),
                 'status': st.get('name') if isinstance(st, dict) else None,
-                'resolution': res.get('name') if isinstance(res, dict) else None,
-                'resolutiondate': f.get('resolutiondate'),
+                'closed_date': f.get('statuscategorychangeddate'),
+                'est_h': round((f.get('timeoriginalestimate') or 0) / 3600, 2),
+                'reel_h': round((f.get('timespent') or 0) / 3600, 2),
             })
         return {
             'jql': jql,

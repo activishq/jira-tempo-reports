@@ -181,27 +181,31 @@ def _validate_dates(start_date: str, end_date: str):
 # Indépendant de Tempo : lit estimé/réel directement dans Jira.
 # ---------------------------------------------------------------------------
 
-# Résolutions considérées comme « annulées » → exclues du calcul de précision
-# (une tâche annulée a souvent un estimé mais peu/pas de temps réel, ce qui
-# fausserait l'écart). Comparaison insensible à la casse. Ajuster au besoin
-# après inspection des résolutions réelles de l'instance Jira.
-CANCELLED_RESOLUTIONS = {
-    "won't do",
-    "wont do",
-    "cancelled",
-    "canceled",
-    "won't fix",
-    "wont fix",
-    "duplicate",
-    "declined",
-    "abandoned",
+# Statuts considérés comme « annulés » → exclus du calcul de précision (une
+# tâche annulée a souvent un estimé mais peu/pas de temps réel, ce qui
+# fausserait l'écart). Le workflow d'Activis ne remplit pas `resolution`, donc
+# on filtre par NOM DE STATUT. Comparaison insensible à la casse. Ajuster après
+# inspection des statuts réels (champ `statuts_vus` de la réponse).
+CANCELLED_STATUSES = {
     "annulé",
     "annulée",
+    "annule",
+    "annulee",
+    "won't do",
+    "wont do",
+    "rejeté",
+    "rejetée",
+    "rejete",
+    "rejetee",
+    "abandonné",
+    "abandonnée",
+    "dupliqué",
+    "duplicate",
 }
 
 
-def _is_cancelled(resolution: Optional[str]) -> bool:
-    return bool(resolution) and resolution.strip().lower() in CANCELLED_RESOLUTIONS
+def _is_cancelled(status: Optional[str]) -> bool:
+    return bool(status) and status.strip().lower() in CANCELLED_STATUSES
 
 
 def _subtract_months(d: datetime, months: int) -> datetime:
@@ -268,18 +272,18 @@ def compute_employee_estimation_accuracy(account_id: str, anchor_date: str) -> d
         account_id, three_months.strftime("%Y-%m-%d"), end_exclusive
     )
 
-    # Exclut les tâches annulées ; parse la date de résolution une fois.
+    # Exclut les tâches annulées ; parse la date de fermeture une fois.
     kept = []
     n_annulees = 0
-    resolutions_vues = {}
+    statuts_vus = {}
     for it in raw:
-        res = it.get("resolution")
-        resolutions_vues[res or "(aucune)"] = resolutions_vues.get(res or "(aucune)", 0) + 1
-        if _is_cancelled(res):
+        st = it.get("status")
+        statuts_vus[st or "(aucun)"] = statuts_vus.get(st or "(aucun)", 0) + 1
+        if _is_cancelled(st):
             n_annulees += 1
             continue
-        rd = it.get("resolutiondate")
-        it["_resolved"] = datetime.strptime(rd[:10], "%Y-%m-%d") if rd else None
+        cd = it.get("closed_date")
+        it["_resolved"] = datetime.strptime(cd[:10], "%Y-%m-%d") if cd else None
         kept.append(it)
 
     windows = [
@@ -293,7 +297,7 @@ def compute_employee_estimation_accuracy(account_id: str, anchor_date: str) -> d
         "anchor_date": anchor_date,
         "windows": windows,
         "n_annulees_exclues": n_annulees,
-        "resolutions_vues": resolutions_vues,
+        "statuts_vus": statuts_vus,
     }
 
 
@@ -312,15 +316,17 @@ def _debug_estimation_accuracy(account_id: str, anchor_date: str) -> dict:
             f'assignee = "{aid}" AND statusCategory = Done '
             f'AND resolutiondate >= "{start}" AND resolutiondate < "{end_excl}"'
         ),
-        "4_assignee_resolved_3mo_anystatus": (
-            f'assignee = "{aid}" AND resolved >= "{start}" AND resolved < "{end_excl}"'
+        "4_assignee_done_statuscatchanged_3mo": (
+            f'assignee = "{aid}" AND statusCategory = Done '
+            f'AND statusCategoryChangedDate >= "{start}" AND statusCategoryChangedDate < "{end_excl}"'
         ),
     }
+    fields = "status,resolution,resolutiondate,statuscategorychangeddate,timeoriginalestimate,timespent"
     return {
         "account_id": account_id,
         "anchor_date": anchor_date,
         "window_3mo": {"start": start, "end_exclusive": end_excl},
-        "probes": {k: jira.probe_jql(v) for k, v in variants.items()},
+        "probes": {k: jira.probe_jql(v, fields=fields) for k, v in variants.items()},
     }
 
 

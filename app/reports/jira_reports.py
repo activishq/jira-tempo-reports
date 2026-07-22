@@ -112,3 +112,55 @@ class JiraReports:
         except requests.RequestException as e:
             print(f"Erreur lors de la récupération des champs du ticket {issue_key}: {e}")
             return None
+
+    def fetch_closed_issues(
+        self, account_id: str, start_date: str, end_exclusive: str
+    ) -> List[dict]:
+        """Récupère les tâches **fermées** (statusCategory = Done) assignées à
+        un employé et résolues dans [start_date, end_exclusive[.
+
+        Retourne une liste de dicts bruts : {issue_key, estimated (h),
+        timespent (h), resolutiondate (str ISO ou None), resolution (nom ou
+        None)}. La pagination du nouvel endpoint /search/jql (token-based) est
+        suivie jusqu'au bout.
+        """
+        jql = (
+            f'assignee = "{account_id}" '
+            f'AND statusCategory = Done '
+            f'AND resolutiondate >= "{start_date}" '
+            f'AND resolutiondate < "{end_exclusive}"'
+        )
+
+        issues: List[dict] = []
+        next_token = None
+        while True:
+            params = {
+                'jql': jql,
+                'fields': 'timeoriginalestimate,timespent,resolutiondate,resolution,summary',
+                'maxResults': 100,
+            }
+            if next_token:
+                params['nextPageToken'] = next_token
+
+            response = JiraApi.search(params)
+            response.raise_for_status()
+            data = response.json()
+
+            for issue in data.get('issues', []):
+                fields = issue.get('fields', {}) or {}
+                resolution = fields.get('resolution') or {}
+                issues.append(
+                    {
+                        'issue_key': issue.get('key'),
+                        'estimated': (fields.get('timeoriginalestimate') or 0) / 3600,
+                        'timespent': (fields.get('timespent') or 0) / 3600,
+                        'resolutiondate': fields.get('resolutiondate'),
+                        'resolution': resolution.get('name') if isinstance(resolution, dict) else None,
+                    }
+                )
+
+            next_token = data.get('nextPageToken')
+            if data.get('isLast', True) or not next_token:
+                break
+
+        return issues

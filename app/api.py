@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from reports.tempo_reports import TempoReport
 from reports.jira_reports import JiraReports
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = FastAPI(title="Jira Tempo Reports API")
 
@@ -174,6 +174,139 @@ def _validate_dates(start_date: str, end_date: str):
 
     if start_date > end_date:
         raise HTTPException(status_code=400, detail="start_date must be before end_date")
+
+
+# ---------------------------------------------------------------------------
+# Précision d'estimation sur tâches fermées (rapport de performance individuel).
+# Indépendant de Tempo : lit estimé/réel directement dans Jira.
+# ---------------------------------------------------------------------------
+
+# Résolutions considérées comme « annulées » → exclues du calcul de précision
+# (une tâche annulée a souvent un estimé mais peu/pas de temps réel, ce qui
+# fausserait l'écart). Comparaison insensible à la casse. Ajuster au besoin
+# après inspection des résolutions réelles de l'instance Jira.
+CANCELLED_RESOLUTIONS = {
+    "won't do",
+    "wont do",
+    "cancelled",
+    "canceled",
+    "won't fix",
+    "wont fix",
+    "duplicate",
+    "declined",
+    "abandoned",
+    "annulé",
+    "annulée",
+}
+
+
+def _is_cancelled(resolution: Optional[str]) -> bool:
+    return bool(resolution) and resolution.strip().lower() in CANCELLED_RESOLUTIONS
+
+
+def _subtract_months(d: datetime, months: int) -> datetime:
+    """Soustrait `months` mois calendaires à `d` (jour ramené au dernier jour
+    du mois si nécessaire). Évite une dépendance à dateutil."""
+    month_index = d.month - 1 - months
+    year = d.year + month_index // 12
+    month = month_index % 12 + 1
+    # Dernier jour du mois cible : on avance d'un mois puis recule d'un jour.
+    if month == 12:
+        first_next = datetime(year + 1, 1, 1)
+    else:
+        first_next = datetime(year, month + 1, 1)
+    last_day = (first_next - timedelta(days=1)).day
+    return d.replace(year=year, month=month, day=min(d.day, last_day))
+
+
+def _accuracy_window(label: str, start: datetime, anchor: datetime, issues: List[dict]) -> dict:
+    """Agrège les tâches fermées dont la date de résolution ∈ [start, anchor]."""
+    sum_estimated = 0.0
+    sum_spent = 0.0
+    n_closed = 0        # tâches fermées AVEC estimé (comptent dans l'écart)
+    n_sans_estime = 0   # tâches fermées sans estimé (exclues du calcul)
+
+    for it in issues:
+        resolved = it.get("_resolved")
+        if resolved is None or resolved < start or resolved > anchor:
+            continue
+        if it["estimated"] > 0:
+            n_closed += 1
+            sum_estimated += it["estimated"]
+            sum_spent += it["timespent"]
+        else:
+            n_sans_estime += 1
+
+    ecart_pct = ((sum_spent - sum_estimated) / sum_estimated * 100) if sum_estimated > 0 else None
+
+    return {
+        "label": label,
+        "start": start.strftime("%Y-%m-%d"),
+        "end": anchor.strftime("%Y-%m-%d"),
+        "n_closed": n_closed,
+        "n_sans_estime": n_sans_estime,
+        "sum_estimated": f2(sum_estimated),
+        "sum_spent": f2(sum_spent),
+        "ecart_pct": None if ecart_pct is None else f2(ecart_pct),
+    }
+
+
+def compute_employee_estimation_accuracy(account_id: str, anchor_date: str) -> dict:
+    """Précision d'estimation (écart signé réel vs estimé) sur les tâches
+    fermées, sur 3 fenêtres cumulatives ancrées sur `anchor_date` :
+    2 semaines, 1 mois, 3 mois. Une seule requête JQL (fenêtre la plus large),
+    puis bucketing par date de résolution."""
+    anchor = datetime.strptime(anchor_date, "%Y-%m-%d")
+    two_weeks = anchor - timedelta(days=14)
+    one_month = _subtract_months(anchor, 1)
+    three_months = _subtract_months(anchor, 3)
+
+    jira = JiraReports()
+    # Borne haute exclusive = lendemain de l'ancre (inclut toute la journée).
+    end_exclusive = (anchor + timedelta(days=1)).strftime("%Y-%m-%d")
+    raw = jira.fetch_closed_issues(
+        account_id, three_months.strftime("%Y-%m-%d"), end_exclusive
+    )
+
+    # Exclut les tâches annulées ; parse la date de résolution une fois.
+    kept = []
+    n_annulees = 0
+    resolutions_vues = {}
+    for it in raw:
+        res = it.get("resolution")
+        resolutions_vues[res or "(aucune)"] = resolutions_vues.get(res or "(aucune)", 0) + 1
+        if _is_cancelled(res):
+            n_annulees += 1
+            continue
+        rd = it.get("resolutiondate")
+        it["_resolved"] = datetime.strptime(rd[:10], "%Y-%m-%d") if rd else None
+        kept.append(it)
+
+    windows = [
+        _accuracy_window("2 semaines", two_weeks, anchor, kept),
+        _accuracy_window("1 mois", one_month, anchor, kept),
+        _accuracy_window("3 mois", three_months, anchor, kept),
+    ]
+
+    return {
+        "account_id": account_id,
+        "anchor_date": anchor_date,
+        "windows": windows,
+        "n_annulees_exclues": n_annulees,
+        "resolutions_vues": resolutions_vues,
+    }
+
+
+@app.get("/api/employee-estimation-accuracy", dependencies=[Depends(require_api_key)])
+def get_employee_estimation_accuracy(
+    account_id: str = Query(..., description="Jira/Tempo user accountId"),
+    end_date: str = Query(..., description="Date d'ancrage (fin du rapport, YYYY-MM-DD)"),
+):
+    try:
+        datetime.strptime(end_date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="end_date must be in YYYY-MM-DD format")
+    return compute_employee_estimation_accuracy(account_id, end_date)
 
 
 @app.get("/api/billable-hours", dependencies=[Depends(require_api_key)])

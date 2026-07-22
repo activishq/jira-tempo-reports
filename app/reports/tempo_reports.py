@@ -72,6 +72,33 @@ class TempoReport:
 
         return all_worklogs
 
+    def fetch_worklogs_by_user(self, account_id, start_date, end_date):
+        """Fetch worklogs for a specific user (Jira accountId) using the dedicated endpoint."""
+        url = f"https://api.tempo.io/4/worklogs/user/{account_id}"
+        all_worklogs = []
+        page_index = 0
+        page_size = 50
+
+        while True:
+            params = {
+                'from': start_date,
+                'to': end_date,
+                'limit': page_size,
+                'offset': page_index * page_size,
+            }
+            response = tempo_request("GET", url, params=params)
+            response.raise_for_status()
+            data = response.json()
+            worklogs = data.get('results', [])
+            if not worklogs:
+                break
+            all_worklogs.extend(worklogs)
+            if not data.get('metadata', {}).get('next'):
+                break
+            page_index += 1
+
+        return all_worklogs
+
     def _get_cached_worklogs(self, start_date: str, end_date: str) -> List[Dict]:
         cache_key = f"{start_date}_{end_date}"
         if cache_key not in self._worklog_cache:

@@ -181,31 +181,26 @@ def _validate_dates(start_date: str, end_date: str):
 # Indépendant de Tempo : lit estimé/réel directement dans Jira.
 # ---------------------------------------------------------------------------
 
-# Statuts considérés comme « annulés » → exclus du calcul de précision (une
-# tâche annulée a souvent un estimé mais peu/pas de temps réel, ce qui
-# fausserait l'écart). Le workflow d'Activis ne remplit pas `resolution`, donc
-# on filtre par NOM DE STATUT. Comparaison insensible à la casse. Ajuster après
-# inspection des statuts réels (champ `statuts_vus` de la réponse).
-CANCELLED_STATUSES = {
-    "annulé",
-    "annulée",
-    "annule",
-    "annulee",
-    "won't do",
-    "wont do",
-    "rejeté",
-    "rejetée",
-    "rejete",
-    "rejetee",
-    "abandonné",
-    "abandonnée",
-    "dupliqué",
-    "duplicate",
+# Seuls ces statuts comptent comme « vraie fin de tâche » à évaluer. Le
+# workflow d'Activis a d'autres statuts dans la catégorie Done (Banque
+# d'heures, NF - Confirmé, Facturé…) qui relèvent du cycle support/facturation
+# et ne sont PAS des tâches estimées à évaluer → exclus. Comparaison insensible
+# à la casse/accents. Champ `statuts_vus` de la réponse = tous les statuts
+# rencontrés (pour ajustement).
+ACCEPTED_STATUSES = {
+    "terminé",
+    "termine",
+    "terminée",
+    "terminee",
+    "résolu",
+    "resolu",
+    "résolue",
+    "resolue",
 }
 
 
-def _is_cancelled(status: Optional[str]) -> bool:
-    return bool(status) and status.strip().lower() in CANCELLED_STATUSES
+def _is_accepted(status: Optional[str]) -> bool:
+    return bool(status) and status.strip().lower() in ACCEPTED_STATUSES
 
 
 def _subtract_months(d: datetime, months: int) -> datetime:
@@ -224,7 +219,7 @@ def _subtract_months(d: datetime, months: int) -> datetime:
 
 
 def _accuracy_window(label: str, start: datetime, anchor: datetime, issues: List[dict]) -> dict:
-    """Agrège les tâches fermées dont la date de résolution ∈ [start, anchor]."""
+    """Agrège les tâches fermées dont la date de fermeture ∈ [start, anchor]."""
     sum_estimated = 0.0
     sum_spent = 0.0
     n_closed = 0        # tâches fermées AVEC estimé (comptent dans l'écart)
@@ -259,7 +254,8 @@ def compute_employee_estimation_accuracy(account_id: str, anchor_date: str) -> d
     """Précision d'estimation (écart signé réel vs estimé) sur les tâches
     fermées, sur 3 fenêtres cumulatives ancrées sur `anchor_date` :
     2 semaines, 1 mois, 3 mois. Une seule requête JQL (fenêtre la plus large),
-    puis bucketing par date de résolution."""
+    puis bucketing par date de fermeture (statusCategoryChangedDate).
+    Seuls les statuts « Terminé »/« Résolu(e) » sont retenus."""
     anchor = datetime.strptime(anchor_date, "%Y-%m-%d")
     two_weeks = anchor - timedelta(days=14)
     one_month = _subtract_months(anchor, 1)
@@ -272,15 +268,15 @@ def compute_employee_estimation_accuracy(account_id: str, anchor_date: str) -> d
         account_id, three_months.strftime("%Y-%m-%d"), end_exclusive
     )
 
-    # Exclut les tâches annulées ; parse la date de fermeture une fois.
+    # Ne garde que les statuts « vraie fin de tâche » ; parse la date une fois.
     kept = []
-    n_annulees = 0
+    n_exclus_statut = 0
     statuts_vus = {}
     for it in raw:
         st = it.get("status")
         statuts_vus[st or "(aucun)"] = statuts_vus.get(st or "(aucun)", 0) + 1
-        if _is_cancelled(st):
-            n_annulees += 1
+        if not _is_accepted(st):
+            n_exclus_statut += 1
             continue
         cd = it.get("closed_date")
         it["_resolved"] = datetime.strptime(cd[:10], "%Y-%m-%d") if cd else None
@@ -296,40 +292,8 @@ def compute_employee_estimation_accuracy(account_id: str, anchor_date: str) -> d
         "account_id": account_id,
         "anchor_date": anchor_date,
         "windows": windows,
-        "n_annulees_exclues": n_annulees,
+        "n_exclus_statut": n_exclus_statut,
         "statuts_vus": statuts_vus,
-    }
-
-
-def _debug_estimation_accuracy(account_id: str, anchor_date: str) -> dict:
-    """DEBUG : teste des variantes de filtre progressivement relâchées pour
-    identifier quelle clause vide la requête."""
-    anchor = datetime.strptime(anchor_date, "%Y-%m-%d")
-    start = _subtract_months(anchor, 3).strftime("%Y-%m-%d")
-    end_excl = (anchor + timedelta(days=1)).strftime("%Y-%m-%d")
-    jira = JiraReports()
-    aid = account_id
-    variants = {
-        "1_assignee_only": f'assignee = "{aid}" ORDER BY resolutiondate DESC',
-        "2_assignee_done": f'assignee = "{aid}" AND statusCategory = Done ORDER BY resolutiondate DESC',
-        "3_assignee_done_resolved_3mo": (
-            f'assignee = "{aid}" AND statusCategory = Done '
-            f'AND resolutiondate >= "{start}" AND resolutiondate < "{end_excl}"'
-        ),
-        "4_assignee_done_statuscatchanged_3mo": (
-            f'assignee = "{aid}" AND statusCategory = Done '
-            f'AND statusCategoryChangedDate >= "{start}" AND statusCategoryChangedDate < "{end_excl}"'
-        ),
-    }
-    fields = "status,resolution,resolutiondate,statuscategorychangeddate,timeoriginalestimate,timespent"
-    return {
-        "account_id": account_id,
-        "anchor_date": anchor_date,
-        "window_3mo": {"start": start, "end_exclusive": end_excl},
-        "probes": {k: jira.probe_jql(v, fields=fields) for k, v in variants.items()},
-        "field_discovery": jira.probe_all_fields(
-            f'assignee = "{aid}" AND statusCategory = Done ORDER BY updated DESC', limit=2
-        ),
     }
 
 
@@ -337,14 +301,11 @@ def _debug_estimation_accuracy(account_id: str, anchor_date: str) -> dict:
 def get_employee_estimation_accuracy(
     account_id: str = Query(..., description="Jira/Tempo user accountId"),
     end_date: str = Query(..., description="Date d'ancrage (fin du rapport, YYYY-MM-DD)"),
-    debug: int = Query(0, description="1 = mode diagnostic (variantes de filtre)"),
 ):
     try:
         datetime.strptime(end_date, "%Y-%m-%d")
     except ValueError:
         raise HTTPException(status_code=400, detail="end_date must be in YYYY-MM-DD format")
-    if debug:
-        return _debug_estimation_accuracy(account_id, end_date)
     return compute_employee_estimation_accuracy(account_id, end_date)
 
 

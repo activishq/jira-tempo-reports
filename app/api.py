@@ -327,6 +327,9 @@ def _debug_estimation_accuracy(account_id: str, anchor_date: str) -> dict:
         "anchor_date": anchor_date,
         "window_3mo": {"start": start, "end_exclusive": end_excl},
         "probes": {k: jira.probe_jql(v, fields=fields) for k, v in variants.items()},
+        "field_discovery": jira.probe_all_fields(
+            f'assignee = "{aid}" AND statusCategory = Done ORDER BY updated DESC', limit=2
+        ),
     }
 
 

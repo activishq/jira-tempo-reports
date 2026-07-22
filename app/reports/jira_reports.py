@@ -199,3 +199,22 @@ class JiraReports:
             'error': None if status_code == 200 else str(data)[:300],
             'sample': sample,
         }
+
+    def probe_all_fields(self, jql: str, limit: int = 3) -> list:
+        """DEBUG : renvoie, pour les premiers billets, toutes les paires
+        champ→valeur dont la clé évoque une date/un statut ou dont la valeur
+        ressemble à une date ISO. Sert à trouver le vrai id du champ
+        « statusCategoryChangedDate »."""
+        response = JiraApi.search({'jql': jql, 'fields': '*all', 'maxResults': limit})
+        data = response.json() if response.status_code == 200 else {}
+        out = []
+        for issue in (data.get('issues', []) if isinstance(data, dict) else [])[:limit]:
+            f = issue.get('fields', {}) or {}
+            hits = {}
+            for k, v in f.items():
+                key_match = any(t in k.lower() for t in ('date', 'change', 'status', 'resol', 'created', 'updated'))
+                val_match = isinstance(v, str) and len(v) >= 10 and v[4] == '-' and v[7] == '-'
+                if key_match or val_match:
+                    hits[k] = v if not isinstance(v, dict) else v.get('name', v)
+            out.append({'key': issue.get('key'), 'fields': hits})
+        return out

@@ -1,12 +1,12 @@
 import os
-from typing import Callable, List, Optional
+from typing import List, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from reports.tempo_reports import TempoReport
 from reports.jira_reports import JiraReports
-from datetime import datetime, timedelta
+from datetime import datetime
 
 app = FastAPI(title="Jira Tempo Reports API")
 
@@ -49,8 +49,6 @@ def f2(value):
 
 def _compute_billable_from_worklogs(
     worklogs: List[dict],
-    fetch_historical: Callable[[str], List[dict]],
-    start_date: str,
     tempo: TempoReport,
     jira: JiraReports,
 ) -> Optional[dict]:
@@ -58,8 +56,11 @@ def _compute_billable_from_worklogs(
     des worklogs (compte Tempo ou utilisateur).
 
     - worklogs : worklogs de la période à analyser.
-    - fetch_historical(day_before) : renvoie les worklogs *avant* la période,
-      pour calculer la fuite (leaked) cumulée correctement.
+
+    Le temps cumulé (timespent_total) et l'estimation sont lus directement
+    depuis Jira (un seul appel par ticket, déjà nécessaire pour l'estimation).
+    Le temps AVANT la période est dérivé (cumul − loggé sur la période), ce qui
+    évite de balayer tout l'historique Tempo depuis 2015 (source des timeouts).
 
     Retourne None si aucun worklog sur la période (le caller renvoie un
     rapport vide).
@@ -79,35 +80,26 @@ def _compute_billable_from_worklogs(
                 time_by_issue[issue_key] = {"logged": 0}
             time_by_issue[issue_key]["logged"] += log["timeSpentSeconds"] / 3600
 
-    # Worklogs historiques (avant la période) pour la fuite cumulée.
-    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-    day_before = (start_dt - timedelta(days=1)).strftime("%Y-%m-%d")
-    historical_worklogs = fetch_historical(day_before)
-    timespent_before = {}
-    for log in historical_worklogs:
-        issue_id = str(log["issue"]["id"])
-        if issue_id not in tempo._issue_key_cache:
-            tempo._issue_key_cache[issue_id] = jira.get_issue_key_from_id(issue_id)
-        issue_key = tempo._issue_key_cache[issue_id]
-        if issue_key:
-            timespent_before[issue_key] = (
-                timespent_before.get(issue_key, 0) + log["timeSpentSeconds"] / 3600
-            )
-
-    # Estimations Jira + fuite/billable par ticket.
+    # Estimation + temps cumulé lus depuis Jira, fuite/billable par ticket.
     for issue_key in time_by_issue:
         try:
-            response = jira._get_issue_fields(issue_key)
-            estimated = (response.get("timeoriginalestimate") or 0) / 3600 if response else 0
+            fields = jira._get_issue_fields(issue_key)
         except Exception:
-            estimated = 0
+            fields = None
+        estimated = (fields.get("timeoriginalestimate") or 0) / 3600 if fields else 0
+        timespent_total = (fields.get("timespent") or 0) / 3600 if fields else 0
+
         logged = time_by_issue[issue_key]["logged"]
-        before = timespent_before.get(issue_key, 0)
+        # Le cumul Jira doit au moins couvrir le temps loggé sur la période
+        # (garde-fou contre un décalage de synchro Tempo -> Jira).
+        if timespent_total < logged:
+            timespent_total = logged
+        before = timespent_total - logged
         leaked_avant = max(0, before - estimated)
-        leaked_fin = max(0, before + logged - estimated)
+        leaked_fin = max(0, timespent_total - estimated)
         leaked = leaked_fin - leaked_avant
         time_by_issue[issue_key]["estimated"] = estimated
-        time_by_issue[issue_key]["timespent_total"] = before + logged
+        time_by_issue[issue_key]["timespent_total"] = timespent_total
         time_by_issue[issue_key]["leaked"] = leaked
         time_by_issue[issue_key]["billable"] = logged - leaked
 
@@ -153,13 +145,7 @@ def compute_billable_hours(account_key: str, start_date: str, end_date: str) -> 
     jira = JiraReports()
 
     worklogs = tempo.fetch_worklogs_by_account(account_key, start_date, end_date)
-    result = _compute_billable_from_worklogs(
-        worklogs,
-        lambda day_before: tempo.fetch_worklogs_by_account(account_key, "2015-01-01", day_before),
-        start_date,
-        tempo,
-        jira,
-    )
+    result = _compute_billable_from_worklogs(worklogs, tempo, jira)
     base = {"account_key": account_key, "start_date": start_date, "end_date": end_date}
     return {**base, **(result or _empty_report())}
 
@@ -174,13 +160,7 @@ def compute_employee_billable_hours(account_id: str, start_date: str, end_date: 
     jira = JiraReports()
 
     worklogs = tempo.fetch_worklogs_by_user(account_id, start_date, end_date)
-    result = _compute_billable_from_worklogs(
-        worklogs,
-        lambda day_before: tempo.fetch_worklogs_by_user(account_id, "2015-01-01", day_before),
-        start_date,
-        tempo,
-        jira,
-    )
+    result = _compute_billable_from_worklogs(worklogs, tempo, jira)
     base = {"account_id": account_id, "start_date": start_date, "end_date": end_date}
     return {**base, **(result or _empty_report())}
 

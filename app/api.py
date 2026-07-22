@@ -57,10 +57,11 @@ def _compute_billable_from_worklogs(
 
     - worklogs : worklogs de la période à analyser.
 
-    Le temps cumulé (timespent_total) et l'estimation sont lus directement
-    depuis Jira (un seul appel par ticket, déjà nécessaire pour l'estimation).
+    Le temps cumulé (timespent_total) et l'estimation sont lus depuis Jira en
+    UNE requête JQL batch (`id in (...)`) au lieu de 2 appels séquentiels par
+    ticket — c'était la cause des timeouts 504 sur les employés à gros volume.
     Le temps AVANT la période est dérivé (cumul − loggé sur la période), ce qui
-    évite de balayer tout l'historique Tempo depuis 2015 (source des timeouts).
+    évite aussi de balayer tout l'historique Tempo depuis 2015.
 
     Retourne None si aucun worklog sur la période (le caller renvoie un
     rapport vide).
@@ -68,28 +69,26 @@ def _compute_billable_from_worklogs(
     if not worklogs:
         return None
 
-    # Agrège le temps loggé par ticket sur la période.
-    time_by_issue = {}
+    # Agrège le temps loggé par issue_id sur la période.
+    logged_by_id: dict = {}
     for log in worklogs:
         issue_id = str(log["issue"]["id"])
-        if issue_id not in tempo._issue_key_cache:
-            tempo._issue_key_cache[issue_id] = jira.get_issue_key_from_id(issue_id)
-        issue_key = tempo._issue_key_cache[issue_id]
-        if issue_key:
-            if issue_key not in time_by_issue:
-                time_by_issue[issue_key] = {"logged": 0}
-            time_by_issue[issue_key]["logged"] += log["timeSpentSeconds"] / 3600
+        logged_by_id[issue_id] = logged_by_id.get(issue_id, 0) + log["timeSpentSeconds"] / 3600
 
-    # Estimation + temps cumulé lus depuis Jira, fuite/billable par ticket.
-    for issue_key in time_by_issue:
-        try:
-            fields = jira._get_issue_fields(issue_key)
-        except Exception:
-            fields = None
-        estimated = (fields.get("timeoriginalestimate") or 0) / 3600 if fields else 0
-        timespent_total = (fields.get("timespent") or 0) / 3600 if fields else 0
+    # Batch : clé + estimation + cumul pour tous les billets d'un coup.
+    meta = jira.fetch_issues_by_ids(list(logged_by_id.keys()))
 
-        logged = time_by_issue[issue_key]["logged"]
+    # Estimation + temps cumulé, fuite/billable par ticket.
+    time_by_issue = {}
+    for issue_id, logged in logged_by_id.items():
+        m = meta.get(issue_id)
+        # Billet non résolu (supprimé / hors permissions) → ignoré, comme avant.
+        if not m or not m.get("key"):
+            continue
+        issue_key = m["key"]
+        estimated = m["estimated"]
+        timespent_total = m["timespent"]
+
         # Le cumul Jira doit au moins couvrir le temps loggé sur la période
         # (garde-fou contre un décalage de synchro Tempo -> Jira).
         if timespent_total < logged:
@@ -98,10 +97,13 @@ def _compute_billable_from_worklogs(
         leaked_avant = max(0, before - estimated)
         leaked_fin = max(0, timespent_total - estimated)
         leaked = leaked_fin - leaked_avant
-        time_by_issue[issue_key]["estimated"] = estimated
-        time_by_issue[issue_key]["timespent_total"] = timespent_total
-        time_by_issue[issue_key]["leaked"] = leaked
-        time_by_issue[issue_key]["billable"] = logged - leaked
+        time_by_issue[issue_key] = {
+            "logged": logged,
+            "estimated": estimated,
+            "timespent_total": timespent_total,
+            "leaked": leaked,
+            "billable": logged - leaked,
+        }
 
     total_logged = sum(v["logged"] for v in time_by_issue.values())
     total_leaked = sum(v["leaked"] for v in time_by_issue.values())

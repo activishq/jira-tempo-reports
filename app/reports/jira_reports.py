@@ -171,3 +171,45 @@ class JiraReports:
                 break
 
         return issues
+
+    def fetch_issues_by_ids(self, issue_ids: List[str]) -> dict:
+        """Batch : {issue_id: {key, estimated (h), timespent (h)}} en une (ou
+        quelques) requête(s) JQL `id in (...)`.
+
+        Remplace les appels séquentiels get_issue_key_from_id + _get_issue_fields
+        (2 par billet) qui causaient des timeouts. Les IDs sont découpés en lots
+        (limite de longueur de la clause JQL) et chaque lot est paginé.
+        """
+        result: dict = {}
+        ids = [str(i) for i in issue_ids if i]
+        CHUNK = 100
+        for start in range(0, len(ids), CHUNK):
+            chunk = ids[start:start + CHUNK]
+            jql = f"id in ({','.join(chunk)})"
+            next_token = None
+            while True:
+                params = {
+                    'jql': jql,
+                    'fields': 'timeoriginalestimate,timespent',
+                    'maxResults': 100,
+                }
+                if next_token:
+                    params['nextPageToken'] = next_token
+
+                response = JiraApi.search(params)
+                response.raise_for_status()
+                data = response.json()
+
+                for issue in data.get('issues', []):
+                    f = issue.get('fields', {}) or {}
+                    result[str(issue.get('id'))] = {
+                        'key': issue.get('key'),
+                        'estimated': (f.get('timeoriginalestimate') or 0) / 3600,
+                        'timespent': (f.get('timespent') or 0) / 3600,
+                    }
+
+                next_token = data.get('nextPageToken')
+                if data.get('isLast', True) or not next_token:
+                    break
+
+        return result

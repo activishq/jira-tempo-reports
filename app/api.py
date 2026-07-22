@@ -297,15 +297,45 @@ def compute_employee_estimation_accuracy(account_id: str, anchor_date: str) -> d
     }
 
 
+def _debug_estimation_accuracy(account_id: str, anchor_date: str) -> dict:
+    """DEBUG : teste des variantes de filtre progressivement relâchées pour
+    identifier quelle clause vide la requête."""
+    anchor = datetime.strptime(anchor_date, "%Y-%m-%d")
+    start = _subtract_months(anchor, 3).strftime("%Y-%m-%d")
+    end_excl = (anchor + timedelta(days=1)).strftime("%Y-%m-%d")
+    jira = JiraReports()
+    aid = account_id
+    variants = {
+        "1_assignee_only": f'assignee = "{aid}" ORDER BY resolutiondate DESC',
+        "2_assignee_done": f'assignee = "{aid}" AND statusCategory = Done ORDER BY resolutiondate DESC',
+        "3_assignee_done_resolved_3mo": (
+            f'assignee = "{aid}" AND statusCategory = Done '
+            f'AND resolutiondate >= "{start}" AND resolutiondate < "{end_excl}"'
+        ),
+        "4_assignee_resolved_3mo_anystatus": (
+            f'assignee = "{aid}" AND resolved >= "{start}" AND resolved < "{end_excl}"'
+        ),
+    }
+    return {
+        "account_id": account_id,
+        "anchor_date": anchor_date,
+        "window_3mo": {"start": start, "end_exclusive": end_excl},
+        "probes": {k: jira.probe_jql(v) for k, v in variants.items()},
+    }
+
+
 @app.get("/api/employee-estimation-accuracy", dependencies=[Depends(require_api_key)])
 def get_employee_estimation_accuracy(
     account_id: str = Query(..., description="Jira/Tempo user accountId"),
     end_date: str = Query(..., description="Date d'ancrage (fin du rapport, YYYY-MM-DD)"),
+    debug: int = Query(0, description="1 = mode diagnostic (variantes de filtre)"),
 ):
     try:
         datetime.strptime(end_date, "%Y-%m-%d")
     except ValueError:
         raise HTTPException(status_code=400, detail="end_date must be in YYYY-MM-DD format")
+    if debug:
+        return _debug_estimation_accuracy(account_id, end_date)
     return compute_employee_estimation_accuracy(account_id, end_date)
 
 

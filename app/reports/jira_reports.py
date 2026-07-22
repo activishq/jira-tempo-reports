@@ -164,3 +164,33 @@ class JiraReports:
                 break
 
         return issues
+
+    def probe_jql(self, jql: str, fields: str = "status,resolution,resolutiondate", max_results: int = 100) -> dict:
+        """DEBUG : exécute un JQL brut (première page) et renvoie le nombre de
+        billets + un échantillon. Sert à diagnostiquer un filtre trop strict."""
+        response = JiraApi.search({'jql': jql, 'fields': fields, 'maxResults': max_results})
+        status_code = response.status_code
+        try:
+            data = response.json()
+        except Exception:
+            data = {}
+        issues = data.get('issues', []) if isinstance(data, dict) else []
+        sample = []
+        for issue in issues[:8]:
+            f = issue.get('fields', {}) or {}
+            st = (f.get('status') or {})
+            res = (f.get('resolution') or {})
+            sample.append({
+                'key': issue.get('key'),
+                'status': st.get('name') if isinstance(st, dict) else None,
+                'resolution': res.get('name') if isinstance(res, dict) else None,
+                'resolutiondate': f.get('resolutiondate'),
+            })
+        return {
+            'jql': jql,
+            'http_status': status_code,
+            'count_first_page': len(issues),
+            'is_last': data.get('isLast', True) if isinstance(data, dict) else True,
+            'error': None if status_code == 200 else str(data)[:300],
+            'sample': sample,
+        }

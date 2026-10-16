@@ -48,13 +48,14 @@ class JiraReports:
                 {
                     'user': user_name,
                     'issue_key': issue['key'],
+                    'issue_id': str(issue['id']),
                     'timespent': (issue['fields']['timespent'] or 0) / 3600,
                     'estimated_time': (issue['fields']['timeoriginalestimate'] or 0) / 3600
                 }
                 for issue in issues
             ]
 
-            return pd.DataFrame(data, columns=['user', 'issue_key', 'timespent', 'estimated_time'])
+            return pd.DataFrame(data, columns=['user', 'issue_key', 'issue_id', 'timespent', 'estimated_time'])
 
         except requests.RequestException as e:
             print(f"Error fetching data from Jira: {e}")

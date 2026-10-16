@@ -39,6 +39,16 @@ class JiraTempoReport:
 
         return df_merged
 
+    def get_hidden_worklog_issues(self, start_date: str, end_date: str, df_merged: pd.DataFrame) -> List[str]:
+        """Billets listés par Jira (worklog dans la période) pour lesquels Tempo ne renvoie
+        aucun worklog, de personne. Cause typique : le compte du token Tempo n'a pas la
+        permission « Voir tous les journaux de travail » sur le projet."""
+        if df_merged.empty or 'issue_id' not in df_merged.columns:
+            return []
+        tempo_issue_ids = self.tempo_report.get_period_issue_ids(start_date, end_date)
+        jira_rows = df_merged[df_merged['issue_id'].astype(str) != '0']
+        return jira_rows[~jira_rows['issue_id'].astype(str).isin(tempo_issue_ids)]['Issue Key'].tolist()
+
     def _calculate_period_leak_time(self, df: pd.DataFrame) -> pd.Series:
         """Calculate the period's leaked time."""
         return df.apply(lambda row: min(max(row['timespent'] - row['estimated_time'], 0), row['logged_time']), axis=1)

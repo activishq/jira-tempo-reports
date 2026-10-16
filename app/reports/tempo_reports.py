@@ -136,6 +136,10 @@ class TempoReport:
 
         return all_worklogs
 
+    def get_period_issue_ids(self, start_date: str, end_date: str) -> set:
+        """IDs des billets ayant au moins un worklog Tempo dans la période, tous auteurs confondus."""
+        return {str(log['issue']['id']) for log in self._get_cached_worklogs(start_date, end_date)}
+
     def _get_issue_keys_batch(self, issue_ids: List[str], jira) -> dict:
         """Récupère les clés de tickets en batch"""
         uncached_ids = [id for id in issue_ids if id not in self.issue_key_cache]

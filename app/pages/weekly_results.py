@@ -100,6 +100,19 @@ def weekly_results_page():
             st.warning("Aucune donnée trouvée pour la période sélectionnée.")
             return
 
+        hidden_issues = jira_tempo_report.get_hidden_worklog_issues(
+            start_date.strftime("%Y-%m-%d"),
+            end_date.strftime("%Y-%m-%d"),
+            df_jira
+        )
+        if hidden_issues:
+            st.warning(
+                "Heures possiblement manquantes : Jira indique du temps dans la période sur "
+                f"{', '.join(hidden_issues)}, mais Tempo ne renvoie aucun worklog pour ces billets. "
+                "Vérifier que le projet donne la permission « Voir tous les journaux de travail » "
+                "(schéma de permissions Jira)."
+            )
+
         # Calcul du temps facturable par issue
         df_jira["Period's Billable Time"] = df_jira["Period's Logged Time"] - df_jira["Period's Leaked Time"]
 
